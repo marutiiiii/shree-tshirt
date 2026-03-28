@@ -3,7 +3,19 @@
  * Products are loaded from uniform_prices via backend API.
  */
 
-const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000`;
+// Dynamic API Base URL - supports both development and production
+const getAPIBase = () => {
+    // If we're in development (localhost), use localhost:5000
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return `${window.location.protocol}//${window.location.hostname}:5000`;
+    }
+    // In production, assume backend is on the same domain
+    // Update this to your actual backend URL (e.g., https://your-backend.render.com)
+    // You can also set it via environment variable if your frontend build supports it
+    return window.__API_BASE__ || `${window.location.protocol}//${window.location.hostname}`;
+};
+
+const API_BASE = getAPIBase();
 const STORAGE_USER_KEY = 'sut_user';
 const STORAGE_SCHOOL_KEY = 'sut_school_id';
 const STORAGE_ACTIVE_TAB_KEY = 'sut_active_tab';
