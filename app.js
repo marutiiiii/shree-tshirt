@@ -9,10 +9,8 @@ const getAPIBase = () => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         return `${window.location.protocol}//${window.location.hostname}:5000`;
     }
-    // In production, assume backend is on the same domain
-    // Update this to your actual backend URL (e.g., https://your-backend.render.com)
-    // You can also set it via environment variable if your frontend build supports it
-    return window.__API_BASE__ || `${window.location.protocol}//${window.location.hostname}`;
+    // In production, use the Render backend
+    return 'https://shree-tshirt-7.onrender.com';
 };
 
 const API_BASE = getAPIBase();
