@@ -254,7 +254,12 @@ def create_invoice():
         student_id = data.get("student_id")
         school_id = data.get("school_id")
         status = data.get("status", "Draft").strip()
+        payment_mode = data.get("payment_mode", "cash").lower().strip()
         items = data.get("items") if isinstance(data.get("items"), list) else []
+        
+        # Validate payment mode
+        if payment_mode not in ["cash", "online"]:
+            payment_mode = "cash"
         
         if not student_id:
             return jsonify({"message": "Student ID is required"}), 400
@@ -306,6 +311,7 @@ def create_invoice():
             "student_id": student_id,
             "school_id": school_id,
             "status": status,
+            "payment_mode": payment_mode,
             "invoice_number": invoice_number,
             "subtotal": subtotal,
             "tax_percent": tax_percent,

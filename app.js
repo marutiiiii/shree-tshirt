@@ -35,6 +35,7 @@ const state = {
     activeUploadedFileId: null,
     selectedStudentIds: new Set(),
     stocks: [],
+    paymentMode: 'cash',
     lastStudentsFetchedAt: 0,
     lastInvoicesFetchedAt: 0,
 };
@@ -153,6 +154,23 @@ function openModal(id) {
 function closeModal(id) {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
+}
+
+function setPaymentMode(mode) {
+    if (mode !== 'cash' && mode !== 'online') {
+        return; // Invalid mode
+    }
+    state.paymentMode = mode;
+    
+    // Update button active states
+    const buttons = document.querySelectorAll('.payment-mode-btn');
+    buttons.forEach(btn => {
+        if (btn.dataset.mode === mode) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
 }
 
 function showView(viewId) {
@@ -668,6 +686,7 @@ function logout() {
     state.activeSchool = null;
     state.activeBillingStudent = null;
     state.cart = {};
+    state.paymentMode = 'cash';
     persistActiveBillingStudentSession('');
     clearPersistedSession();
     showView('view-login');
@@ -815,14 +834,14 @@ function renderBillingStudentsTable(filterText = '') {
         const invoiceId = String(inv.id || '').toLowerCase();
         const invoiceNumber = String(inv.invoice_number || '').toLowerCase();
         const studentName = String(inv.student_name || '').toLowerCase();
-        const schoolName = String(inv.school_name || state.activeSchool?.name || '').toLowerCase();
         const status = String(inv.status || '').toLowerCase();
+        const paymentMode = String(inv.payment_mode || '').toLowerCase();
         const createdAt = String(inv.created_at || '').toLowerCase();
         return (
             invoiceId.includes(lower) ||
             invoiceNumber.includes(lower) ||
             studentName.includes(lower) ||
-            schoolName.includes(lower) ||
+            paymentMode.includes(lower) ||
             status.includes(lower) ||
             createdAt.includes(lower)
         );
@@ -849,6 +868,7 @@ function renderBillingStudentsTable(filterText = '') {
     filtered.forEach(inv => {
         const amount = Number(inv.total ?? inv.amount ?? 0);
         const status = inv.status || 'Pending';
+        const paymentMode = (inv.payment_mode || 'cash').toUpperCase();
         const statusCls = status === 'Paid' ? 'badge-success' : (status === 'Draft' ? 'badge-outline' : 'badge-warning');
 
         const tr = document.createElement('tr');
@@ -858,7 +878,7 @@ function renderBillingStudentsTable(filterText = '') {
         tr.innerHTML = `
             <td class="font-medium">#INV-${inv.id || 'NA'}</td>
             <td>${inv.student_name || '-'}</td>
-            <td>${state.activeSchool?.name || inv.school_name || '-'}</td>
+            <td><span class="badge badge-secondary">${paymentMode}</span></td>
             <td class="font-bold text-primary">₹${amount.toFixed(2)}</td>
             <td><span class="badge ${statusCls}">${status}</span></td>
         `;
@@ -1131,12 +1151,13 @@ function renderInvoicesTable() {
     draftInvoices.forEach(inv => {
         const amount = Number(inv.total ?? inv.amount ?? 0);
         const status = inv.status || 'Pending';
+        const paymentMode = (inv.payment_mode || 'cash').toUpperCase();
         const statusCls = status === 'Paid' ? 'badge-success' : (status === 'Draft' ? 'badge-outline' : 'badge-warning');
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="font-medium">#INV-${inv.id || 'NA'}</td>
             <td>${inv.student_name || '-'}</td>
-            <td>${state.activeSchool?.name || inv.school_name || '-'}</td>
+            <td><span class="badge badge-secondary">${paymentMode}</span></td>
             <td class="font-bold text-primary">₹${amount.toFixed(2)}</td>
             <td><span class="badge ${statusCls}">${status}</span></td>
             <td class="text-right">-</td>
@@ -1555,6 +1576,17 @@ function startBillingForStudent(studentId) {
     state.billingPriceByItemId = {};
     state.billingSizeByItemId = {};
     state.cart = {};
+    state.paymentMode = 'cash'; // Reset payment mode to default
+    
+    // Reset button states
+    const buttons = document.querySelectorAll('.payment-mode-btn');
+    buttons.forEach(btn => {
+        if (btn.dataset.mode === 'cash') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
 
     // Fetch fresh invoice data from database (no local cache used)
     fetch(`${API_BASE}/create-invoice/${studentId}`)
@@ -1722,6 +1754,7 @@ function persistInvoice(status) {
         student_id: state.activeBillingStudent.id,
         school_id: state.activeSchool?.id || null,
         status,
+        payment_mode: state.paymentMode || 'cash',
         items: invoiceItems,
     };
 
@@ -1826,6 +1859,7 @@ function showPaperBill(invoiceId, status) {
     document.getElementById('pb-student-roll').textContent = s.sNo || '-';
     document.getElementById('pb-school-name').textContent = state.activeSchool?.name || '-';
     document.getElementById('pb-phone').textContent = s.phone || '-';
+    document.getElementById('pb-payment-mode').textContent = (state.paymentMode || 'cash').toUpperCase();
     document.getElementById('pb-barcode-label').textContent = `INV-${invoiceId}`;
 
     const tbody = document.getElementById('pb-items-body');
@@ -1888,8 +1922,19 @@ function closeBillModal() {
 
     if (nextStudent?.id) {
         state.activeBillingStudent = nextStudent;
+        state.paymentMode = 'cash'; // Reset payment mode
         persistActiveBillingStudentSession(nextStudent.id);
         pendingStudentFocusId = String(nextStudent.id);
+        
+        // Reset button states
+        const buttons = document.querySelectorAll('.payment-mode-btn');
+        buttons.forEach(btn => {
+            if (btn.dataset.mode === 'cash') {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
     } else if (currentStudentId) {
         persistActiveBillingStudentSession(currentStudentId);
         pendingStudentFocusId = currentStudentId;

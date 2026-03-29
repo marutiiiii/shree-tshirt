@@ -490,7 +490,7 @@
                                 <tr>
                                     <th>Invoice ID</th>
                                     <th>Student Name</th>
-                                    <th>School</th>
+                                    <th>Payment Mode</th>
                                     <th>Total Amount</th>
                                     <th>Status</th>
                                     <th class="text-right">Actions</th>
@@ -529,7 +529,7 @@
                                 <tr>
                                     <th>Invoice ID</th>
                                     <th>Student Name</th>
-                                    <th>School</th>
+                                    <th>Payment Mode</th>
                                     <th>Total Amount</th>
                                     <th>Status</th>
                                 </tr>
@@ -612,6 +612,21 @@
                                             <p>No items selected yet.</p>
                                         </div>
                                         <!-- Cart items injected here -->
+                                    </div>
+
+                                    <div class="divider"></div>
+
+                                    <!-- Payment Mode Selection -->
+                                    <div class="payment-mode-section mb-3">
+                                        <label class="text-muted text-sm font-medium">Payment Mode</label>
+                                        <div class="payment-mode-buttons flex gap-2 mt-2">
+                                            <button type="button" class="btn payment-mode-btn active" data-mode="cash" onclick="setPaymentMode('cash')">
+                                                <i class="ph ph-money"></i> Cash
+                                            </button>
+                                            <button type="button" class="btn payment-mode-btn" data-mode="online" onclick="setPaymentMode('online')">
+                                                <i class="ph ph-credit-card"></i> Online
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div class="divider"></div>
@@ -964,6 +979,10 @@
                                 <div class="paper-bill-info">
                                     <span>Time</span>
                                     <span id="pb-time">—</span>
+                                </div>
+                                <div class="paper-bill-info">
+                                    <span>Payment Mode</span>
+                                    <span id="pb-payment-mode">—</span>
                                 </div>
                             </div>
                             <div class="paper-bill-info-col">
