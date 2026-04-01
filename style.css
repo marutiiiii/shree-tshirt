@@ -937,7 +937,9 @@ img {
 }
 
 .table tbody tr:hover {
-    background: var(--bg-color);
+    background: rgba(45, 212, 191, 0.15);
+    transition: background-color 0.2s ease;
+    cursor: pointer;
 }
 
 .empty-state {
