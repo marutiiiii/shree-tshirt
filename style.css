@@ -360,6 +360,42 @@ img {
     box-shadow: var(--shadow-btn);
 }
 
+/* Payment Mode Button Styles */
+.payment-mode-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.payment-mode-btn {
+    flex: 1;
+    padding: 0.75rem 1rem !important;
+    background-color: var(--bg-light) !important;
+    color: var(--text-muted) !important;
+    border: 1px solid var(--border) !important;
+    transition: all 0.2s ease !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.payment-mode-btn:hover {
+    background-color: var(--bg-color) !important;
+    border-color: var(--primary) !important;
+}
+
+.payment-mode-btn.active {
+    background-color: var(--primary) !important;
+    color: white !important;
+    border-color: var(--primary) !important;
+    font-weight: 600;
+}
+
+.payment-mode-btn i {
+    font-size: 1.1rem;
+}
+}
+
 /* FORMS */
 .form-group {
     margin-bottom: 1.25rem;
@@ -905,7 +941,7 @@ img {
 }
 
 .table tbody tr:hover {
-    background: var(--primary-light);
+    background: rgba(45, 212, 191, 0.15);
     cursor: pointer;
 }
 

@@ -1,0 +1,58 @@
+{
+  "name": "Shree T-Shirt Billing System",
+  "short_name": "Shree Billing",
+  "description": "School Uniform & Stationery Billing System",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "img/SUARCHE%20CLOTHING%20LOGO.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "img/SUARCHE%20CLOTHING%20LOGO.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "img/SUARCHE%20CLOTHING%20LOGO.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "img/SUARCHE%20CLOTHING%20LOGO.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "img/SUARCHE%20CLOTHING%20LOGO.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "img/SUARCHE%20CLOTHING%20LOGO.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "screenshots_mobile": [
+    {
+      "src": "img/SUARCHE%20CLOTHING%20LOGO.png",
+      "sizes": "270x540",
+      "type": "image/png"
+    }
+  ]
+}

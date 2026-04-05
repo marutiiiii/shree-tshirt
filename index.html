@@ -5,12 +5,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>School Uniform & Stationery Billing</title>
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/png" href="img/SUARCHE%20CLOTHING%20LOGO.png">
+    <link rel="apple-touch-icon" href="img/SUARCHE%20CLOTHING%20LOGO.png">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="description" content="School Uniform & Stationery Billing System - Shree T-Shirt">
+    <!-- Web App Manifest for PWA -->
+    <link rel="manifest" href="manifest.json">
     <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Phosphor Icons: clean, minimal icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- SheetJS for Excel parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Production API Base URL Configuration -->
+    <script>
+        // API Base URL: https://shree-tshirt-7.onrender.com
+        // Frontend will automatically use this for production
+    </script>
     <link rel="stylesheet" href="style.css?v=4">
     <style>
         /* Hard override to ensure updated invoice styling even if old CSS is cached */
@@ -485,7 +497,7 @@
                                 <tr>
                                     <th>Invoice ID</th>
                                     <th>Student Name</th>
-                                    <th>School</th>
+                                    <th>Payment Mode</th>
                                     <th>Total Amount</th>
                                     <th>Status</th>
                                     <th class="text-right">Actions</th>
@@ -524,7 +536,7 @@
                                 <tr>
                                     <th>Invoice ID</th>
                                     <th>Student Name</th>
-                                    <th>School</th>
+                                    <th>Payment Mode</th>
                                     <th>Total Amount</th>
                                     <th>Status</th>
                                 </tr>
@@ -607,6 +619,21 @@
                                             <p>No items selected yet.</p>
                                         </div>
                                         <!-- Cart items injected here -->
+                                    </div>
+
+                                    <div class="divider"></div>
+
+                                    <!-- Payment Mode Selection -->
+                                    <div class="payment-mode-section mb-3">
+                                        <label class="text-muted text-sm font-medium">Payment Mode</label>
+                                        <div class="payment-mode-buttons flex gap-2 mt-2">
+                                            <button type="button" class="btn payment-mode-btn active" data-mode="cash" onclick="setPaymentMode('cash')">
+                                                <i class="ph ph-money"></i> Cash
+                                            </button>
+                                            <button type="button" class="btn payment-mode-btn" data-mode="online" onclick="setPaymentMode('online')">
+                                                <i class="ph ph-credit-card"></i> Online
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div class="divider"></div>
@@ -959,6 +986,10 @@
                                 <div class="paper-bill-info">
                                     <span>Time</span>
                                     <span id="pb-time">—</span>
+                                </div>
+                                <div class="paper-bill-info">
+                                    <span>Payment Mode</span>
+                                    <span id="pb-payment-mode">—</span>
                                 </div>
                             </div>
                             <div class="paper-bill-info-col">

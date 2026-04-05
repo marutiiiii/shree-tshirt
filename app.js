@@ -3,7 +3,17 @@
  * Products are loaded from uniform_prices via backend API.
  */
 
-const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000`;
+// Dynamic API Base URL - supports both development and production
+const getAPIBase = () => {
+    // If we're in development (localhost), use localhost:5000
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return `${window.location.protocol}//${window.location.hostname}:5000`;
+    }
+    // In production, use the Render backend
+    return 'https://shree-tshirt-7.onrender.com';
+};
+
+const API_BASE = getAPIBase();
 const STORAGE_USER_KEY = 'sut_user';
 const STORAGE_SCHOOL_KEY = 'sut_school_id';
 const STORAGE_ACTIVE_TAB_KEY = 'sut_active_tab';
@@ -25,6 +35,7 @@ const state = {
     activeUploadedFileId: null,
     selectedStudentIds: new Set(),
     stocks: [],
+    paymentMode: 'cash',
     lastStudentsFetchedAt: 0,
     lastInvoicesFetchedAt: 0,
     studentsCurrentPage: 1,
@@ -195,6 +206,23 @@ function openModal(id) {
 function closeModal(id) {
     const el = document.getElementById(id);
     if (el) el.classList.add('hidden');
+}
+
+function setPaymentMode(mode) {
+    if (mode !== 'cash' && mode !== 'online') {
+        return; // Invalid mode
+    }
+    state.paymentMode = mode;
+    
+    // Update button active states
+    const buttons = document.querySelectorAll('.payment-mode-btn');
+    buttons.forEach(btn => {
+        if (btn.dataset.mode === mode) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
 }
 
 function showView(viewId) {
@@ -710,6 +738,7 @@ function logout() {
     state.activeSchool = null;
     state.activeBillingStudent = null;
     state.cart = {};
+    state.paymentMode = 'cash';
     persistActiveBillingStudentSession('');
     clearPersistedSession();
     showView('view-login');
@@ -888,14 +917,14 @@ function renderBillingStudentsTable(filterText = '') {
         if (invoiceNumber.length > 20 && invoiceNumber.includes('-')) invoiceNumber = 'INV-' + invoiceNumber.split('-')[1];
         invoiceNumber = invoiceNumber.toLowerCase();
         const studentName = String(inv.student_name || '').toLowerCase();
-        const schoolName = String(inv.school_name || state.activeSchool?.name || '').toLowerCase();
         const status = String(inv.status || '').toLowerCase();
+        const paymentMode = String(inv.payment_mode || '').toLowerCase();
         const createdAt = String(inv.created_at || '').toLowerCase();
         return (
             invoiceId.includes(lower) ||
             invoiceNumber.includes(lower) ||
             studentName.includes(lower) ||
-            schoolName.includes(lower) ||
+            paymentMode.includes(lower) ||
             status.includes(lower) ||
             createdAt.includes(lower)
         );
@@ -922,6 +951,7 @@ function renderBillingStudentsTable(filterText = '') {
     filtered.forEach(inv => {
         const amount = Number(inv.total ?? inv.amount ?? 0);
         const status = inv.status || 'Pending';
+        const paymentMode = (inv.payment_mode || 'cash').toUpperCase();
         const statusCls = status === 'Paid' ? 'badge-success' : (status === 'Draft' ? 'badge-outline' : 'badge-warning');
 
         const tr = document.createElement('tr');
@@ -935,7 +965,7 @@ function renderBillingStudentsTable(filterText = '') {
                 return num;
             })()}</td>
             <td>${inv.student_name || '-'}</td>
-            <td>${state.activeSchool?.name || inv.school_name || '-'}</td>
+            <td><span class="badge badge-secondary">${paymentMode}</span></td>
             <td class="font-bold text-primary">₹${amount.toFixed(2)}</td>
             <td><span class="badge ${statusCls}">${status}</span></td>
             <td class="text-right">
@@ -1346,12 +1376,13 @@ function renderInvoicesTable() {
     draftInvoices.forEach(inv => {
         const amount = Number(inv.total ?? inv.amount ?? 0);
         const status = inv.status || 'Pending';
+        const paymentMode = (inv.payment_mode || 'cash').toUpperCase();
         const statusCls = status === 'Paid' ? 'badge-success' : (status === 'Draft' ? 'badge-outline' : 'badge-warning');
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="font-medium">#INV-${inv.id || 'NA'}</td>
             <td>${inv.student_name || '-'}</td>
-            <td>${state.activeSchool?.name || inv.school_name || '-'}</td>
+            <td><span class="badge badge-secondary">${paymentMode}</span></td>
             <td class="font-bold text-primary">₹${amount.toFixed(2)}</td>
             <td><span class="badge ${statusCls}">${status}</span></td>
             <td class="text-right">-</td>
@@ -1770,6 +1801,17 @@ function startBillingForStudent(studentId) {
     state.billingPriceByItemId = {};
     state.billingSizeByItemId = {};
     state.cart = {};
+    state.paymentMode = 'cash'; // Reset payment mode to default
+    
+    // Reset button states
+    const buttons = document.querySelectorAll('.payment-mode-btn');
+    buttons.forEach(btn => {
+        if (btn.dataset.mode === 'cash') {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
 
     // Fetch fresh invoice data from database (no local cache used)
     fetch(`${API_BASE}/create-invoice/${studentId}`)
@@ -1937,6 +1979,7 @@ function persistInvoice(status, paymentMode, utrNo) {
         student_id: state.activeBillingStudent.id,
         school_id: state.activeSchool?.id || null,
         status,
+        payment_mode: state.paymentMode || 'cash',
         items: invoiceItems,
         payment_mode: (paymentMode || 'cash').toLowerCase(),
         utr_no: utrNo || null,
@@ -2066,6 +2109,7 @@ function showPaperBill(invoiceId, status, paymentMode, utrNo, invoiceNumber) {
     document.getElementById('pb-student-roll').textContent = s.sNo || '-';
     document.getElementById('pb-school-name').textContent = state.activeSchool?.name || '-';
     document.getElementById('pb-phone').textContent = s.phone || '-';
+    document.getElementById('pb-payment-mode').textContent = (state.paymentMode || 'cash').toUpperCase();
     document.getElementById('pb-barcode-label').textContent = displayLabel;
 
     const tbody = document.getElementById('pb-items-body');
@@ -2144,8 +2188,19 @@ function closeBillModal() {
 
     if (nextStudent?.id) {
         state.activeBillingStudent = nextStudent;
+        state.paymentMode = 'cash'; // Reset payment mode
         persistActiveBillingStudentSession(nextStudent.id);
         pendingStudentFocusId = String(nextStudent.id);
+        
+        // Reset button states
+        const buttons = document.querySelectorAll('.payment-mode-btn');
+        buttons.forEach(btn => {
+            if (btn.dataset.mode === 'cash') {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
     } else if (currentStudentId) {
         persistActiveBillingStudentSession(currentStudentId);
         pendingStudentFocusId = currentStudentId;
