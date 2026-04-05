@@ -18,9 +18,9 @@ def login():
     """
     try:
         data = request.get_json()
-        email = data.get("email", "").strip()
-        password = data.get("password", "").strip()
-        selected_role = data.get("role", "").strip().lower()
+        email = str(data.get("email") or "").strip()
+        password = str(data.get("password") or "").strip()
+        selected_role = str(data.get("role") or "").strip().lower()
         
         if not email or not password or not selected_role:
             return jsonify({"message": "Email, password, and role are required"}), 400
@@ -74,10 +74,10 @@ def register():
     """
     try:
         data = request.get_json()
-        name = data.get("name", "").strip()
-        email = data.get("email", "").strip()
-        password = data.get("password", "").strip()
-        role = data.get("role", "").strip().lower()
+        name = str(data.get("name") or "").strip()
+        email = str(data.get("email") or "").strip()
+        password = str(data.get("password") or "").strip()
+        role = str(data.get("role") or "").strip().lower()
         
         if not all([name, email, password, role]):
             return jsonify({"message": "Name, email, password, and role are required"}), 400

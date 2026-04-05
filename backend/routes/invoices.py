@@ -2,6 +2,7 @@
 from flask import Blueprint, request, jsonify
 from supabase_client import get_supabase
 from datetime import datetime
+import traceback
 
 invoices_bp = Blueprint("invoices", __name__)
 supabase = get_supabase()
@@ -280,8 +281,8 @@ def create_invoice():
         
         student_id = data.get("student_id")
         school_id = data.get("school_id")
-        status = data.get("status", "Draft").strip()
-        payment_mode = data.get("payment_mode", "cash").lower().strip()
+        status = str(data.get("status") or "Draft").strip()
+        payment_mode = str(data.get("payment_mode") or "cash").lower().strip()
         items = data.get("items") if isinstance(data.get("items"), list) else []
         
         # Validate payment mode
@@ -309,7 +310,7 @@ def create_invoice():
         
         # Generate sequential invoice number (e.g., INV-00001)
         invoice_number = _generate_sequential_invoice_no()
-        utr_no = data.get("utr_no", "").strip() or None
+        utr_no = str(data.get("utr_no") or "").strip() or None
 
         normalized_items = []
         total = 0.0
@@ -361,8 +362,58 @@ def create_invoice():
                     "quantity": line["quantity"],
                     "size": line["size"],
                     "unit_price": line["unit_price"],
+                    "line_total": round(line["quantity"] * line["unit_price"], 2)
                 })
             supabase.table("invoice_items").insert(invoice_items_payload).execute()
+            
+            # Decrement stock for each item sold
+            stock_table = _resolve_stock_table()
+            students_table = _resolve_students_table()
+            if stock_table and students_table:
+                try:
+                    student_resp = supabase.table(students_table).select("*").eq("id", student_id).limit(1).execute()
+                    student = student_resp.data[0] if student_resp.data else {}
+                    
+                    for line in normalized_items:
+                        # Find the matching stock row
+                        stock_rows = supabase.table(stock_table).select("*").eq("school_id", school_id).execute().data or []
+                        
+                        # We use the same picking logic as _pick_price_for_item but to find the ID
+                        best_match_id = None
+                        max_score = -1
+                        
+                        aliases = [_normalize_token(v) for v in ITEM_TO_STOCK_NAMES.get(_normalize_token(line["item_name"]), [line["item_name"]])]
+                        std_token = _normalize_token(student.get("std"))
+                        gender_token = _normalize_gender(student.get("gender"))
+                        size_token = _normalize_token(line["size"])
+                        
+                        for row in stock_rows:
+                            row_item = _normalize_token(row.get("item") or row.get("Item") or "")
+                            if row_item not in aliases: continue
+                            
+                            row_std = _normalize_token(row.get("standard") or row.get("Standard") or "")
+                            row_gender = _normalize_gender(row.get("gender") or row.get("Gender") or "")
+                            row_size = _normalize_token(row.get("size") or row.get("Size") or "")
+                            
+                            score = 0
+                            if std_token and row_std == std_token: score += 8
+                            if gender_token and row_gender == gender_token: score += 4
+                            if size_token and row_size == size_token: score += 6
+                            
+                            if score > max_score:
+                                max_score = score
+                                best_match_id = row.get("id")
+                        
+                        if best_match_id:
+                            # Update stock: decrement by line["quantity"]
+                            current_stock_resp = supabase.table(stock_table).select("stock").eq("id", best_match_id).execute()
+                            if current_stock_resp.data:
+                                current_stock = int(current_stock_resp.data[0].get("stock") or 0)
+                                supabase.table(stock_table).update({"stock": max(0, current_stock - line["quantity"])}).eq("id", best_match_id).execute()
+                except Exception as e:
+                    print(f"Stock decrement error: {str(e)}")
+                    traceback.print_exc()
+
 
         response_items = [{
             "dress": line["item_name"],
@@ -379,6 +430,7 @@ def create_invoice():
         
     except Exception as e:
         print(f"Create invoice error: {str(e)}")
+        traceback.print_exc()
         return jsonify({"message": f"Server error: {str(e)}"}), 500
 
 @invoices_bp.route("/create-invoice/<student_id>", methods=["GET"])
@@ -466,6 +518,7 @@ def get_invoice_details(invoice_id):
         }), 200
     except Exception as e:
         print(f"Get invoice details error: {str(e)}")
+        traceback.print_exc()
         return jsonify({"message": f"Server error: {str(e)}"}), 500
 
 @invoices_bp.route("/invoices/<invoice_id>", methods=["PUT"])
@@ -495,4 +548,108 @@ def update_invoice(invoice_id):
         
     except Exception as e:
         print(f"Update invoice error: {str(e)}")
+
+@invoices_bp.route("/invoices/<invoice_id>/return-item/<item_id>", methods=["POST"])
+def return_item(invoice_id, item_id):
+    """Return a specific item from an invoice and update stock"""
+    try:
+        # 1. Find the invoice item
+        item_resp = supabase.table("invoice_items").select("*").eq("id", item_id).limit(1).execute()
+        if not item_resp.data:
+            return jsonify({"message": "Invoice item not found"}), 404
+        
+        item = item_resp.data[0]
+        quantity_to_return = int(item.get("quantity") or 0)
+        
+        # 2. Get invoice and student details for stock matching
+        invoice_resp = supabase.table("invoices").select("*").eq("id", invoice_id).limit(1).execute()
+        if not invoice_resp.data:
+            return jsonify({"message": "Invoice not found"}), 404
+        
+        invoice = invoice_resp.data[0]
+        student_id = invoice.get("student_id")
+        school_id = invoice.get("school_id")
+        
+        students_table = _resolve_students_table()
+        student = {}
+        if student_id and students_table:
+            student_resp = supabase.table(students_table).select("*").eq("id", student_id).limit(1).execute()
+            if student_resp.data:
+                student = student_resp.data[0]
+
+        # 3. Increment stock
+        stock_table = _resolve_stock_table()
+        if stock_table and school_id:
+            try:
+                stock_rows = supabase.table(stock_table).select("*").eq("school_id", school_id).execute().data or []
+                
+                best_match_id = None
+                max_score = -1
+                
+                aliases = [_normalize_token(v) for v in ITEM_TO_STOCK_NAMES.get(_normalize_token(item["item_name"]), [item["item_name"]])]
+                std_token = _normalize_token(student.get("std"))
+                gender_token = _normalize_gender(student.get("gender"))
+                size_token = _normalize_token(item["size"])
+                
+                for row in stock_rows:
+                    row_item = _normalize_token(row.get("item") or row.get("Item") or "")
+                    if row_item not in aliases: continue
+                    
+                    row_std = _normalize_token(row.get("standard") or row.get("Standard") or "")
+                    row_gender = _normalize_gender(row.get("gender") or row.get("Gender") or "")
+                    row_size = _normalize_token(row.get("size") or row.get("Size") or "")
+                    
+                    score = 0
+                    if std_token and row_std == std_token: score += 8
+                    if gender_token and row_gender == gender_token: score += 4
+                    if size_token and row_size == size_token: score += 6
+                    
+                    if score > max_score:
+                        max_score = score
+                        best_match_id = row.get("id")
+                
+                if best_match_id:
+                    current_stock_resp = supabase.table(stock_table).select("stock").eq("id", best_match_id).execute()
+                    if current_stock_resp.data:
+                        current_stock = int(current_stock_resp.data[0].get("stock") or 0)
+                        supabase.table(stock_table).update({"stock": current_stock + quantity_to_return}).eq("id", best_match_id).execute()
+            except Exception as e:
+                print(f"Stock increment error: {str(e)}")
+                traceback.print_exc()
+
+        # 4. Delete the invoice item
+        supabase.table("invoice_items").delete().eq("id", item_id).execute()
+        
+        # 5. Recalculate invoice total
+        remaining_items_resp = supabase.table("invoice_items").select("*").eq("invoice_id", invoice_id).execute()
+        remaining_items = remaining_items_resp.data or []
+        
+        if not remaining_items:
+            # If no items left, delete the invoice
+            supabase.table("invoices").delete().eq("id", invoice_id).execute()
+            return jsonify({
+                "message": "Item returned and invoice deleted successfully (no items remaining)",
+                "deleted": True
+            }), 200
+        
+        new_subtotal = sum(float(it.get("unit_price") or 0) * int(it.get("quantity") or 0) for it in remaining_items)
+        tax_percent = float(invoice.get("tax_percent") or 0)
+        new_tax_amount = round(new_subtotal * (tax_percent / 100), 2)
+        new_total = round(new_subtotal + new_tax_amount, 2)
+        
+        supabase.table("invoices").update({
+            "subtotal": new_subtotal,
+            "tax_amount": new_tax_amount,
+            "total": new_total
+        }).eq("id", invoice_id).execute()
+        
+        return jsonify({
+            "message": "Item returned and invoice updated successfully",
+            "deleted": False
+        }), 200
+
+    except Exception as e:
+        print(f"Return item error: {str(e)}")
+        traceback.print_exc()
         return jsonify({"message": f"Server error: {str(e)}"}), 500
+

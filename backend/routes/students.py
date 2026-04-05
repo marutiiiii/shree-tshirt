@@ -123,12 +123,12 @@ def create_student():
             return jsonify({"message": "Students table not found in database"}), 500
         
         school_id = data.get("school_id")
-        student_name = data.get("student_name", "").strip()
-        std = data.get("std", "").strip()
-        gender = data.get("gender", "").strip()
-        house = data.get("house", "").strip()
-        parent_name = data.get("parent_name", "").strip()
-        mobile_no = data.get("mobile_no", "").strip()
+        student_name = str(data.get("student_name") or "").strip()
+        std = str(data.get("std") or "").strip()
+        gender = str(data.get("gender") or "").strip()
+        house = str(data.get("house") or "").strip()
+        parent_name = str(data.get("parent_name") or "").strip()
+        mobile_no = str(data.get("mobile_no") or "").strip()
         
         if not all([school_id, student_name]):
             return jsonify({"message": "School ID and student name are required"}), 400
@@ -141,7 +141,7 @@ def create_student():
             "house": house,
             "parent_name": parent_name,
             "mobile_no": mobile_no,
-            "utr_no": data.get("utr_no", "").strip()
+            "utr_no": str(data.get("utr_no") or "").strip()
         }
 
         for col in ITEM_COLUMNS:
@@ -195,7 +195,7 @@ def update_student(student_id):
         update_payload = {}
         for key in ["student_name", "std", "gender", "house", "parent_name", "mobile_no", "utr_no"]:
             if key in data:
-                update_payload[key] = data.get(key, "").strip()
+                update_payload[key] = str(data.get(key) or "").strip()
 
         for col in ITEM_COLUMNS:
             if col in data:

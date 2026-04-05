@@ -262,11 +262,11 @@ def create_school():
         data = request.get_json(silent=True) if request.is_json else request.form.to_dict()
         data = data or {}
         
-        school_name = data.get("school_name", "").strip()
-        address = data.get("address", "").strip()
-        contact_person = data.get("contact_person", "").strip()
-        contact_person_number = data.get("contact_person_number", "").strip()
-        academic_year = data.get("academic_year", "2024-2025").strip()
+        school_name = str(data.get("school_name") or "").strip()
+        address = str(data.get("address") or "").strip()
+        contact_person = str(data.get("contact_person") or "").strip()
+        contact_person_number = str(data.get("contact_person_number") or "").strip()
+        academic_year = str(data.get("academic_year") or "2024-2025").strip()
         
         if not school_name:
             return jsonify({"message": "School name is required"}), 400
