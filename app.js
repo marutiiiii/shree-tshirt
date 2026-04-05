@@ -79,9 +79,9 @@ const ITEM_IMAGE_MAP = {
     'pt suit': 'img/pt_suit.png',
     'pant': 'img/Pant.png',
     'pt_suit': 'img/pt_suit.png',
-    'hair band': 'img/rubber band.png',
-    'rubber band': 'img/rubber band.png',
-    'hair belt': 'img/hair band.png',
+    'hair band': 'img/hair band.png',
+    'rubber band': 'img/hair band.png',
+    'hair belt': 'img/hair belt.png',
     'pt socks': 'img/socks.png',
 };
 
@@ -174,19 +174,19 @@ function showToast(msg, type = 'success') {
     if (!toast || !text) return;
 
 
-function togglePasswordVisibility(inputId, btn) {
-    const input = document.getElementById(inputId);
-    if (!input || !btn) return;
+    function togglePasswordVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (!input || !btn) return;
 
-    const isHidden = input.type === 'password';
-    input.type = isHidden ? 'text' : 'password';
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
 
-    const icon = btn.querySelector('i');
-    if (icon) {
-        icon.className = `ph ${isHidden ? 'ph-eye-slash' : 'ph-eye'}`;
+        const icon = btn.querySelector('i');
+        if (icon) {
+            icon.className = `ph ${isHidden ? 'ph-eye-slash' : 'ph-eye'}`;
+        }
+        btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
     }
-    btn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
-}
     text.textContent = msg;
     toast.style.background = type === 'error' ? 'var(--danger)' : 'var(--bg-card)';
     toast.classList.remove('hidden');
@@ -213,7 +213,7 @@ function setPaymentMode(mode) {
         return; // Invalid mode
     }
     state.paymentMode = mode;
-    
+
     // Update button active states
     const buttons = document.querySelectorAll('.payment-mode-btn');
     buttons.forEach(btn => {
@@ -382,9 +382,9 @@ function normalizeCatalogItem(item, index) {
     const standardPriceMap = (item?.standard_price_map && typeof item.standard_price_map === 'object') ? item.standard_price_map : {};
     const parsedDefault = Number(item?.default_price);
     const itemName = String(item?.item_name || item?.name || '').trim();
-    
+
     let iconClass = ITEM_ICON_BY_DB_FIELD[dbField] || 'ph-package';
-    
+
     // Girl Shirt gets dress icon
     if (itemName.toLowerCase().includes('girl') && dbField === 'shirt') {
         iconClass = 'ph-dress';
@@ -397,7 +397,7 @@ function normalizeCatalogItem(item, index) {
     if (itemName.toLowerCase().includes('pt suit')) {
         iconClass = 'ph-hoodie';
     }
-    
+
     return {
         id: index + 1,
         name: itemName,
@@ -412,13 +412,13 @@ function normalizeCatalogItem(item, index) {
 
 function renderProductIconMarkup(item) {
     const itemName = String(item?.name || '').trim().toLowerCase();
-    
+
     // First priority: Check ITEM_IMAGE_MAP for exact name match
     const mappedImage = ITEM_IMAGE_MAP[itemName];
     if (mappedImage) {
         return `<img class="product-image-icon" src="${mappedImage}" alt="${String(item?.name || 'Product')} icon">`;
     }
-    
+
     // Second priority: Check if item has an img field
     const iconValue = String(item?.img || '').trim();
     const lower = iconValue.toLowerCase();
@@ -426,7 +426,7 @@ function renderProductIconMarkup(item) {
     if (isImage) {
         return `<img class="product-image-icon" src="${iconValue}" alt="${String(item?.name || 'Product')} icon">`;
     }
-    
+
     // Fallback to icon
     return `<i class="ph ${iconValue || 'ph-package'}"></i>`;
 }
@@ -981,7 +981,7 @@ function handleReturnInvoiceClick(e, invoiceId) {
     openReturnModal(invoiceId);
 }
 
-window.openReturnModal = function(invoiceId) {
+window.openReturnModal = function (invoiceId) {
     if (!invoiceId) return;
 
     fetch(`${API_BASE}/invoices/${invoiceId}/details`)
@@ -990,7 +990,7 @@ window.openReturnModal = function(invoiceId) {
             const items = Array.isArray(data?.items) ? data.items : [];
             const tbody = document.querySelector('#return-items-table tbody');
             tbody.innerHTML = '';
-            
+
             if (items.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No items available to return</td></tr>';
             } else {
@@ -1015,35 +1015,35 @@ window.openReturnModal = function(invoiceId) {
         });
 }
 
-window.confirmReturnItem = function(invoiceId, itemId) {
+window.confirmReturnItem = function (invoiceId, itemId) {
     if (!confirm('Are you sure you want to return this item? Inventory will be updated and the invoice total will be modified.')) return;
-    
+
     fetch(`${API_BASE}/invoices/${invoiceId}/return-item/${itemId}`, {
         method: 'POST'
     })
-    .then(res => res.json().then(data => ({ status: res.status, data })))
-    .then(result => {
-        if (result.status >= 200 && result.status < 300) {
-            showToast(result.data.message || 'Item returned successfully');
-            
-            // Auto reload visual state
-            fetchInvoices({ force: true });
-            
-            if (result.data.deleted) {
-                // If entire invoice deleted, close the modal
-                closeModal('return-items-modal');
+        .then(res => res.json().then(data => ({ status: res.status, data })))
+        .then(result => {
+            if (result.status >= 200 && result.status < 300) {
+                showToast(result.data.message || 'Item returned successfully');
+
+                // Auto reload visual state
+                fetchInvoices({ force: true });
+
+                if (result.data.deleted) {
+                    // If entire invoice deleted, close the modal
+                    closeModal('return-items-modal');
+                } else {
+                    // Re-open modal to refresh item list
+                    openReturnModal(invoiceId);
+                }
             } else {
-                // Re-open modal to refresh item list
-                openReturnModal(invoiceId);
+                showToast(result.data.message || 'Failed to return item', 'error');
             }
-        } else {
-            showToast(result.data.message || 'Failed to return item', 'error');
-        }
-    })
-    .catch(err => {
-        console.error('Return item error:', err);
-        showToast('Connection error while returning item', 'error');
-    });
+        })
+        .catch(err => {
+            console.error('Return item error:', err);
+            showToast('Connection error while returning item', 'error');
+        });
 }
 
 function openGeneratedInvoice(invoiceId) {
@@ -1153,7 +1153,7 @@ function exportTotalSaleXls() {
     const schoolName = String(state.activeSchool?.name || 'School').replace(/[^a-z0-9]+/gi, '_');
     const dateText = new Date().toISOString().slice(0, 10);
 
-    const cashInvoices   = paidInvoices.filter(inv => String(inv?.payment_mode || 'cash').toLowerCase() !== 'online');
+    const cashInvoices = paidInvoices.filter(inv => String(inv?.payment_mode || 'cash').toLowerCase() !== 'online');
     const onlineInvoices = paidInvoices.filter(inv => String(inv?.payment_mode || '').toLowerCase() === 'online');
 
     let filesExported = 0;
@@ -1181,7 +1181,7 @@ function exportTotalSaleXls() {
         rows.push(['TOTAL', '', Number(grandTotal.toFixed(2)), '', '']);
 
         const sheet = XLSX.utils.aoa_to_sheet(rows);
-        const book  = XLSX.utils.book_new();
+        const book = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(book, sheet, 'Cash Sales');
         XLSX.writeFile(book, `${schoolName}_cash_sale_${dateText}.xlsx`);
         filesExported++;
@@ -1211,7 +1211,7 @@ function exportTotalSaleXls() {
         rows.push(['TOTAL', '', Number(grandTotal.toFixed(2)), '', '', '']);
 
         const sheet = XLSX.utils.aoa_to_sheet(rows);
-        const book  = XLSX.utils.book_new();
+        const book = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(book, sheet, 'Online Sales');
         XLSX.writeFile(book, `${schoolName}_online_sale_${dateText}.xlsx`);
         filesExported++;
@@ -1704,12 +1704,12 @@ function openAddParentModal() {
     console.log('openAddParentModal called');
     const form = document.getElementById('add-parent-form');
     if (form) form.reset();
-    
+
     // Populate student dropdown
     const select = document.getElementById('add-parent-student');
     console.log('select element:', select);
     console.log('state.students:', state.students);
-    
+
     if (select) {
         select.innerHTML = '<option value="">Select Student</option>';
         if (state.students && state.students.length > 0) {
@@ -1726,7 +1726,7 @@ function openAddParentModal() {
             select.appendChild(option);
         }
     }
-    
+
     console.log('Opening modal');
     openModal('add-parent-modal');
 }
@@ -1734,26 +1734,26 @@ function openAddParentModal() {
 function handleAddParent(e) {
     e.preventDefault();
     console.log('handleAddParent called');
-    
+
     const studentId = document.getElementById('add-parent-student')?.value?.trim();
     const parentName = document.getElementById('add-parent-name')?.value?.trim();
     const parentPhone = document.getElementById('add-parent-phone')?.value?.trim();
-    
+
     console.log('Form data:', { studentId, parentName, parentPhone });
-    
+
     if (!studentId) {
         console.log('No student selected');
         showToast('Please select a student', 'error');
         return;
     }
-    
+
     const payload = {
         parent_name: parentName || '',
         mobile_no: parentPhone || '',
     };
 
     console.log('Sending payload:', payload);
-    
+
     fetch(`${API_BASE}/students/${studentId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1802,7 +1802,7 @@ function startBillingForStudent(studentId) {
     state.billingSizeByItemId = {};
     state.cart = {};
     state.paymentMode = 'cash'; // Reset payment mode to default
-    
+
     // Reset button states
     const buttons = document.querySelectorAll('.payment-mode-btn');
     buttons.forEach(btn => {
@@ -2094,7 +2094,7 @@ function showPaperBill(invoiceId, status, paymentMode, utrNo, invoiceNumber) {
     if (!s) return;
 
     const now = new Date();
-    
+
     // Resolve the display label
     let displayLabel = String(invoiceNumber || '');
     if (!displayLabel) {
@@ -2191,7 +2191,7 @@ function closeBillModal() {
         state.paymentMode = 'cash'; // Reset payment mode
         persistActiveBillingStudentSession(nextStudent.id);
         pendingStudentFocusId = String(nextStudent.id);
-        
+
         // Reset button states
         const buttons = document.querySelectorAll('.payment-mode-btn');
         buttons.forEach(btn => {
@@ -2248,7 +2248,7 @@ function handleLogin(e) {
                 };
                 persistUserSession();
                 showToast('Logged in successfully');
-                
+
                 // Check if user is a worker - skip school selection and go directly to dashboard
                 if (data.user?.role === 'worker') {
                     // For workers: fetch schools and proceed directly to dashboard
@@ -2467,10 +2467,10 @@ document.addEventListener('click', (event) => {
 function clearAllFrontendCache() {
     // Clear all localStorage data
     localStorage.clear();
-    
+
     // Clear all sessionStorage data
     sessionStorage.clear();
-    
+
     // Clear IndexedDB if available
     if (window.indexedDB) {
         try {
@@ -2490,14 +2490,14 @@ function clearAllFrontendCache() {
             console.warn('IndexedDB not available', e);
         }
     }
-    
+
     // Clear all cookies
     document.cookie.split(';').forEach(cookie => {
         const eqPos = cookie.indexOf('=');
         const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
         document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
     });
-    
+
     // Clear all state data
     state.user = null;
     state.activeSchool = null;
@@ -2512,7 +2512,7 @@ function clearAllFrontendCache() {
     state.billingSizeByItemId = {};
     state.activeUploadedFileId = null;
     state.selectedStudentIds = new Set();
-    
+
     // Clear any global variables with cached data
     if (typeof studentCart !== 'undefined') {
         studentCart = {};
@@ -2520,7 +2520,7 @@ function clearAllFrontendCache() {
     if (typeof uploadedStudentFilesBySchool !== 'undefined') {
         uploadedStudentFilesBySchool = {};
     }
-    
+
     console.log('All frontend caches have been cleared.');
 }
 
@@ -2530,8 +2530,8 @@ window.clearCache = clearAllFrontendCache;
 function initApp() {
     // Restore previous session so refresh does not force login again.
     restoreSessionIfAvailable();
-    
-    
+
+
     document.getElementById('login-form')?.addEventListener('submit', handleLogin);
     document.getElementById('register-form')?.addEventListener('submit', handleRegister);
     document.getElementById('add-school-form')?.addEventListener('submit', handleAddSchool);
@@ -2614,7 +2614,7 @@ function uploadStocks() {
         })
         .then(({ status, data }) => {
             if (btn) btn.disabled = false;
-            
+
             if (status >= 200 && status < 300 && data.success) {
                 showToast(data.message || `Successfully uploaded ${data.count || 0} stock records`);
                 // Clear file input
@@ -2662,11 +2662,11 @@ function loadStocks() {
 function renderStocksTable() {
     const table = document.getElementById('stocks-table')?.querySelector('tbody');
     const emptyMsg = document.getElementById('empty-stocks');
-    
+
     if (!table || !emptyMsg) return;
 
     table.innerHTML = '';
-    
+
     if (!state.stocks || state.stocks.length === 0) {
         emptyMsg.classList.remove('hidden');
         return;
