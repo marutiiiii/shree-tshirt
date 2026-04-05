@@ -443,6 +443,17 @@
                             <p>No students found. Add some data.</p>
                         </div>
                     </div>
+
+                    <!-- Pagination Controls -->
+                    <div id="students-pagination" class="pagination-controls mb-4" style="display: none;">
+                        <button id="btn-prev-page" class="btn btn-outline btn-sm" onclick="changeStudentsPage(-1)">
+                            <i class="ph ph-caret-left"></i> Previous
+                        </button>
+                        <span id="students-page-info" class="text-sm font-medium">Page 1 of 1</span>
+                        <button id="btn-next-page" class="btn btn-outline btn-sm" onclick="changeStudentsPage(1)">
+                            Next <i class="ph ph-caret-right"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Sub-View: Parent Details Page (PAGE 11) -->

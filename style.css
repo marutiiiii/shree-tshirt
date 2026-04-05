@@ -945,6 +945,29 @@ img {
     cursor: pointer;
 }
 
+/* PAGINATION */
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    margin-top: -1px; /* overlap with table card border */
+}
+
+.pagination-controls .btn {
+    min-width: 100px;
+}
+
+.pagination-controls .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .empty-state {
     text-align: center;
     padding: 4rem 2rem;
