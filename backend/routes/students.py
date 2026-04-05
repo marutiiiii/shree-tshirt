@@ -140,7 +140,8 @@ def create_student():
             "gender": gender,
             "house": house,
             "parent_name": parent_name,
-            "mobile_no": mobile_no
+            "mobile_no": mobile_no,
+            "utr_no": data.get("utr_no", "").strip()
         }
 
         for col in ITEM_COLUMNS:
@@ -192,7 +193,7 @@ def update_student(student_id):
         
         # Build update payload with only provided fields
         update_payload = {}
-        for key in ["student_name", "std", "gender", "house", "parent_name", "mobile_no"]:
+        for key in ["student_name", "std", "gender", "house", "parent_name", "mobile_no", "utr_no"]:
             if key in data:
                 update_payload[key] = data.get(key, "").strip()
 

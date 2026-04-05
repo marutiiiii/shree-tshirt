@@ -241,6 +241,33 @@ def get_invoices_by_school(school_id):
     except Exception as e:
         print(f"Get invoices error: {str(e)}")
         return jsonify({"message": f"Server error: {str(e)}"}), 500
+        
+def _generate_sequential_invoice_no():
+    """Generates the next sequential invoice number like INV-00001"""
+    try:
+        # Search for invoices that start with the sequential pattern 'INV-0%'
+        # This allows existing timestamped invoices (INV-202...) to be ignored
+        response = supabase.table("invoices").select("invoice_number").ilike("invoice_number", "INV-0%").order("invoice_number", desc=True).limit(1).execute()
+        
+        last_no = None
+        if response.data and len(response.data) > 0:
+            last_no = response.data[0].get("invoice_number")
+        
+        next_num = 1
+        if last_no and last_no.startswith("INV-"):
+            try:
+                # Extract numeric part (e.g., '00001' from 'INV-00001')
+                numeric_part = last_no.replace("INV-", "").strip()
+                next_num = int(numeric_part) + 1
+            except Exception:
+                next_num = 1
+        
+        # Format with leading zeros (e.g., INV-00001)
+        return f"INV-{next_num:05d}"
+    except Exception as e:
+        print(f"Error generating sequence: {str(e)}")
+        # Fallback to timestamp if something breaks to prevent duplicate errors
+        return f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
 @invoices_bp.route("/invoices", methods=["POST"])
 def create_invoice():
@@ -280,8 +307,9 @@ def create_invoice():
         if status not in ["Draft", "Paid"]:
             status = "Draft"
         
-        # Generate invoice number
-        invoice_number = f"INV-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        # Generate sequential invoice number (e.g., INV-00001)
+        invoice_number = _generate_sequential_invoice_no()
+        utr_no = data.get("utr_no", "").strip() or None
 
         normalized_items = []
         total = 0.0
@@ -312,6 +340,7 @@ def create_invoice():
             "school_id": school_id,
             "status": status,
             "payment_mode": payment_mode,
+            "utr_no": utr_no,
             "invoice_number": invoice_number,
             "subtotal": subtotal,
             "tax_percent": tax_percent,

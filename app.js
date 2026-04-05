@@ -223,6 +223,18 @@ function setPaymentMode(mode) {
             btn.classList.remove('active');
         }
     });
+
+    // Toggle UTR input visibility
+    const utrContainer = document.getElementById('utr-input-container');
+    const utrInput = document.getElementById('utr-number-input');
+    if (utrContainer) {
+        if (mode === 'online') {
+            utrContainer.style.display = 'block';
+        } else {
+            utrContainer.style.display = 'none';
+            if (utrInput) utrInput.value = ''; // Clear for cash
+        }
+    }
 }
 
 function showView(viewId) {
@@ -1624,6 +1636,7 @@ function handleAddStudent(e) {
         house: document.getElementById('add-student-house')?.value?.trim() || '',
         parent_name: document.getElementById('add-student-parent')?.value?.trim() || '',
         mobile_no: document.getElementById('add-student-parent-phone')?.value?.trim() || '',
+        utr_no: document.getElementById('add-student-utr')?.value?.trim() || '',
         uniform_items: uniformItems,
         ...uniformFields,
     };
@@ -1661,6 +1674,7 @@ function editStudent(id) {
     document.getElementById('edit-student-gender').value = s.gender || '';
     document.getElementById('edit-student-parent').value = s.parent || '';
     document.getElementById('edit-student-parent-phone').value = s.phone || '';
+    document.getElementById('edit-student-utr').value = s.utr_no || '';
 
     closeDropdown(id);
     openModal('edit-student-modal');
@@ -1676,6 +1690,7 @@ function handleEditStudent(e) {
         gender: document.getElementById('edit-student-gender')?.value?.trim() || '',
         parent_name: document.getElementById('edit-student-parent')?.value?.trim() || '',
         mobile_no: document.getElementById('edit-student-parent-phone')?.value?.trim() || '',
+        utr_no: document.getElementById('edit-student-utr')?.value?.trim() || '',
     };
 
     fetch(`${API_BASE}/students/${currentEditStudentId}`, {
@@ -2064,7 +2079,7 @@ function generateInvoice() {
         btn.style.opacity = '0.7';
     }
 
-    const paymentMode = document.getElementById('payment-mode-select')?.value || 'Cash';
+    const paymentMode = state.paymentMode || 'cash';
     const utrNo = document.getElementById('utr-number-input')?.value?.trim() || '';
 
     persistInvoice('Paid', paymentMode, utrNo).then(result => {
@@ -2109,7 +2124,8 @@ function showPaperBill(invoiceId, status, paymentMode, utrNo, invoiceNumber) {
     document.getElementById('pb-student-roll').textContent = s.sNo || '-';
     document.getElementById('pb-school-name').textContent = state.activeSchool?.name || '-';
     document.getElementById('pb-phone').textContent = s.phone || '-';
-    document.getElementById('pb-payment-mode').textContent = (state.paymentMode || 'cash').toUpperCase();
+    document.getElementById('pb-payment-mode').textContent = (paymentMode || 'cash').toUpperCase();
+    
     document.getElementById('pb-barcode-label').textContent = displayLabel;
 
     const tbody = document.getElementById('pb-items-body');
@@ -2153,15 +2169,17 @@ function showPaperBill(invoiceId, status, paymentMode, utrNo, invoiceNumber) {
     const resolvedMode = String(paymentMode || 'cash');
     const resolvedUtr = String(utrNo || '').trim();
     const pmEl = document.getElementById('pb-payment-mode');
-    const utrRow = document.getElementById('pb-utr-row');
-    const utrEl = document.getElementById('pb-utr-no');
+    const bUtrRow = document.getElementById('pb-utr-row');
+    const bUtrEl = document.getElementById('pb-utr');
+    
     if (pmEl) pmEl.textContent = resolvedMode.charAt(0).toUpperCase() + resolvedMode.slice(1);
-    if (utrRow && utrEl) {
+    
+    if (bUtrRow && bUtrEl) {
         if (resolvedMode.toLowerCase() === 'online' && resolvedUtr) {
-            utrEl.textContent = resolvedUtr;
-            utrRow.classList.remove('hidden');
+            bUtrEl.textContent = resolvedUtr;
+            bUtrRow.style.display = 'flex';
         } else {
-            utrRow.classList.add('hidden');
+            bUtrRow.style.display = 'none';
         }
     }
 
