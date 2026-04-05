@@ -37,7 +37,10 @@ def _clean_item_name(value):
     raw = str(value or "").strip()
     cleaned = re.sub(r"\s+", " ", raw)
     cleaned = re.sub(r"^(boy|boys|girl|girls|male|female)\s+", "", cleaned, flags=re.IGNORECASE)
-    return cleaned.strip() or raw
+    cleaned = cleaned.strip() or raw
+    if cleaned.lower() == "rubber band":
+        return "Hair Band"
+    return cleaned
 
 
 def _infer_db_field(item_name):
@@ -59,6 +62,9 @@ def _infer_db_field(item_name):
         "house_shoes": "house_shoes",
         "blazer": "blazer",
         "school_bag": "school_bag",
+        "hair_band": "hair_band",
+        "hair_belt": "hair_belt",
+        "pt_socks": "pt_socks",
     }
     return mapping.get(token, token or "item")
 

@@ -900,8 +900,13 @@ img {
     vertical-align: middle;
 }
 
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
 .table tbody tr:hover {
-    background: var(--bg-color);
+    background: var(--primary-light);
+    cursor: pointer;
 }
 
 .empty-state {
@@ -1527,11 +1532,12 @@ img {
 .dropdown-toggle {
     background: transparent;
     border: none;
-    padding: 0.25rem;
+    padding: 0.5rem;
     border-radius: var(--radius-sm);
     cursor: pointer;
     color: var(--text-muted);
     transition: all 0.2s ease;
+    font-size: 1.75rem;
 }
 
 .dropdown-toggle:hover {

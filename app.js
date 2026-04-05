@@ -27,10 +27,12 @@ const state = {
     stocks: [],
     lastStudentsFetchedAt: 0,
     lastInvoicesFetchedAt: 0,
+    studentsCurrentPage: 1,
 };
 
 let isInvoiceSubmitting = false;
 let pendingStudentFocusId = null;
+const STUDENTS_PER_PAGE = 50;
 
 const ITEM_ICON_BY_DB_FIELD = {
     shirt: 'ph-t-shirt',
@@ -50,6 +52,9 @@ const ITEM_ICON_BY_DB_FIELD = {
     hair_band: 'ph-bandaids',
     school_bag: 'ph-backpack',
     pt_suit: 'ph-t-shirt',
+    hair_band: 'ph-bandaids',
+    hair_belt: 'ph-bandaids',
+    pt_socks: 'ph-footprints',
 };
 
 // Item name to image mapping
@@ -63,7 +68,39 @@ const ITEM_IMAGE_MAP = {
     'pt suit': 'img/pt_suit.png',
     'pant': 'img/Pant.png',
     'pt_suit': 'img/pt_suit.png',
+    'hair band': 'img/rubber band.png',
+    'rubber band': 'img/rubber band.png',
+    'hair belt': 'img/hair band.png',
+    'pt socks': 'img/socks.png',
 };
+
+// Preferred display order for POS item grid
+const PREFERRED_ITEM_ORDER = [
+    'boy shirt',
+    'girl shirt',
+    'pina',
+    'pant',
+    'belt',
+    'tie',
+    'socks',
+    'pt suit',
+    'hair band',
+    'hair belt',
+    'pt socks',
+];
+
+function getPosItemSortIndex(item) {
+    const name = String(item?.name || '').toLowerCase().trim();
+    for (let i = 0; i < PREFERRED_ITEM_ORDER.length; i++) {
+        const keyword = PREFERRED_ITEM_ORDER[i];
+        if (name.includes(keyword) || keyword.includes(name)) return i;
+    }
+    return PREFERRED_ITEM_ORDER.length;
+}
+
+function sortPosItems(items) {
+    return [...items].sort((a, b) => getPosItemSortIndex(a) - getPosItemSortIndex(b));
+}
 
 // Cache removed - all data now fetched from database only
 
@@ -86,11 +123,26 @@ function isGirlShirtItem(item) {
     return normalizeItemKey(item?.name || '') === 'girlshirt';
 }
 
+function isPinaItem(item) {
+    return normalizeItemKey(item?.name || '') === 'pina';
+}
+
+function isHairBandItem(item) {
+    return normalizeItemKey(item?.name || '') === 'hairband';
+}
+
+function isHairBeltItem(item) {
+    return normalizeItemKey(item?.name || '') === 'hairbelt';
+}
+
 function shouldShowItemForGender(item, genderToken) {
     if (!item) return false;
     if (!genderToken) return true;
     if (isBoyShirtItem(item)) return genderToken === 'boys';
     if (isGirlShirtItem(item)) return genderToken === 'girls';
+    if (isPinaItem(item)) return genderToken === 'girls';
+    if (isHairBandItem(item)) return genderToken === 'girls';
+    if (isHairBeltItem(item)) return genderToken === 'girls';
     return true;
 }
 
@@ -676,11 +728,16 @@ function getStudentsInWorkOrder() {
     });
 }
 
-function renderStudentsTable(filterText = '') {
+function renderStudentsTable(filterText = '', resetPage = false) {
     const tbody = document.querySelector('#students-table tbody');
     const tableWrapper = document.getElementById('students-table')?.parentElement;
     const empty = document.getElementById('empty-students');
+    const paginationControls = document.getElementById('students-pagination');
     if (!tbody) return;
+
+    if (resetPage) {
+        state.studentsCurrentPage = 1;
+    }
 
     const lower = String(filterText || '').toLowerCase();
     const filtered = state.students.filter(s =>
@@ -694,13 +751,31 @@ function renderStudentsTable(filterText = '') {
     if (!filtered.length) {
         if (empty) empty.classList.remove('hidden');
         if (tableWrapper) tableWrapper.classList.add('hidden');
+        if (paginationControls) paginationControls.style.display = 'none';
         return;
     }
 
     if (empty) empty.classList.add('hidden');
     if (tableWrapper) tableWrapper.classList.remove('hidden');
+    if (paginationControls) paginationControls.style.display = 'flex';
 
-    filtered.forEach(s => {
+    const totalPages = Math.ceil(filtered.length / STUDENTS_PER_PAGE) || 1;
+    if (state.studentsCurrentPage > totalPages) state.studentsCurrentPage = totalPages;
+    if (state.studentsCurrentPage < 1) state.studentsCurrentPage = 1;
+
+    const startIndex = (state.studentsCurrentPage - 1) * STUDENTS_PER_PAGE;
+    const endIndex = Math.min(startIndex + STUDENTS_PER_PAGE, filtered.length);
+    const paginated = filtered.slice(startIndex, endIndex);
+
+    const pageInfo = document.getElementById('students-page-info');
+    const btnPrev = document.getElementById('btn-prev-page');
+    const btnNext = document.getElementById('btn-next-page');
+
+    if (pageInfo) pageInfo.textContent = `Page ${state.studentsCurrentPage} of ${totalPages}`;
+    if (btnPrev) btnPrev.disabled = state.studentsCurrentPage === 1;
+    if (btnNext) btnNext.disabled = state.studentsCurrentPage === totalPages;
+
+    paginated.forEach(s => {
         const tr = document.createElement('tr');
         tr.setAttribute('data-student-id', String(s.id || ''));
         tr.innerHTML = `
@@ -743,6 +818,11 @@ function renderStudentsTable(filterText = '') {
 
         pendingStudentFocusId = null;
     }
+}
+
+function changeStudentsPage(delta) {
+    state.studentsCurrentPage += delta;
+    renderStudentsTable(document.getElementById('search-student')?.value || '', false);
 }
 
 function renderParentsTable() {
@@ -803,7 +883,10 @@ function renderBillingStudentsTable(filterText = '') {
     const lower = String(filterText || '').toLowerCase();
     const filtered = state.invoices.filter(inv => {
         const invoiceId = String(inv.id || '').toLowerCase();
-        const invoiceNumber = String(inv.invoice_number || '').toLowerCase();
+        const fallbackId = String(inv.id || 'NA').split('-')[0].toUpperCase();
+        let invoiceNumber = String(inv.invoice_number || `INV-${fallbackId}`).toUpperCase();
+        if (invoiceNumber.length > 20 && invoiceNumber.includes('-')) invoiceNumber = 'INV-' + invoiceNumber.split('-')[1];
+        invoiceNumber = invoiceNumber.toLowerCase();
         const studentName = String(inv.student_name || '').toLowerCase();
         const schoolName = String(inv.school_name || state.activeSchool?.name || '').toLowerCase();
         const status = String(inv.status || '').toLowerCase();
@@ -846,13 +929,90 @@ function renderBillingStudentsTable(filterText = '') {
         tr.title = 'Click to view invoice';
         tr.onclick = () => openGeneratedInvoice(String(inv.id || ''));
         tr.innerHTML = `
-            <td class="font-medium">#INV-${inv.id || 'NA'}</td>
+            <td class="font-medium">${(() => {
+                let num = String(inv.invoice_number || `INV-${String(inv.id || 'NA').split('-')[0].toUpperCase()}`);
+                if (num.length > 20 && num.includes('-')) num = 'INV-' + num.split('-')[1].toUpperCase();
+                return num;
+            })()}</td>
             <td>${inv.student_name || '-'}</td>
             <td>${state.activeSchool?.name || inv.school_name || '-'}</td>
             <td class="font-bold text-primary">₹${amount.toFixed(2)}</td>
             <td><span class="badge ${statusCls}">${status}</span></td>
+            <td class="text-right">
+                <button class="btn btn-icon-small btn-outline" style="color:var(--danger);" onclick="handleReturnInvoiceClick(event, '${inv.id}')" title="Return Items"><i class="ph ph-arrow-u-up-left"></i> Return</button>
+            </td>
         `;
         tbody.appendChild(tr);
+    });
+}
+
+function handleReturnInvoiceClick(e, invoiceId) {
+    if (e) e.stopPropagation();
+    openReturnModal(invoiceId);
+}
+
+window.openReturnModal = function(invoiceId) {
+    if (!invoiceId) return;
+
+    fetch(`${API_BASE}/invoices/${invoiceId}/details`)
+        .then(res => res.json())
+        .then(data => {
+            const items = Array.isArray(data?.items) ? data.items : [];
+            const tbody = document.querySelector('#return-items-table tbody');
+            tbody.innerHTML = '';
+            
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No items available to return</td></tr>';
+            } else {
+                items.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${formatProductColumnLabel(item.item_name || item.dress)}${item.size && item.size !== '-' ? ` (${item.size})` : ''}</td>
+                        <td class="font-medium">${item.quantity}</td>
+                        <td>₹${Number(item.unit_price || 0).toFixed(2)}</td>
+                        <td class="text-right">
+                            <button class="btn btn-icon-small btn-outline" style="color:var(--danger); border-color:var(--danger)" onclick="confirmReturnItem('${invoiceId}', '${item.id}')" title="Return this item"><i class="ph ph-arrow-u-up-left"></i> Return</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            openModal('return-items-modal');
+        })
+        .catch(err => {
+            console.error('Failed to load invoice items:', err);
+            showToast('Failed to load items for return', 'error');
+        });
+}
+
+window.confirmReturnItem = function(invoiceId, itemId) {
+    if (!confirm('Are you sure you want to return this item? Inventory will be updated and the invoice total will be modified.')) return;
+    
+    fetch(`${API_BASE}/invoices/${invoiceId}/return-item/${itemId}`, {
+        method: 'POST'
+    })
+    .then(res => res.json().then(data => ({ status: res.status, data })))
+    .then(result => {
+        if (result.status >= 200 && result.status < 300) {
+            showToast(result.data.message || 'Item returned successfully');
+            
+            // Auto reload visual state
+            fetchInvoices({ force: true });
+            
+            if (result.data.deleted) {
+                // If entire invoice deleted, close the modal
+                closeModal('return-items-modal');
+            } else {
+                // Re-open modal to refresh item list
+                openReturnModal(invoiceId);
+            }
+        } else {
+            showToast(result.data.message || 'Failed to return item', 'error');
+        }
+    })
+    .catch(err => {
+        console.error('Return item error:', err);
+        showToast('Connection error while returning item', 'error');
     });
 }
 
@@ -878,7 +1038,11 @@ function openGeneratedInvoice(invoiceId) {
 }
 
 function renderPaperBillFromSavedInvoice(invoice, items, student, schoolName) {
-    const invoiceLabel = String(invoice?.invoice_number || `INV-${invoice?.id || 'NA'}`);
+    const fallbackId = String(invoice?.id || 'NA').split('-')[0].toUpperCase();
+    let invoiceLabel = String(invoice?.invoice_number || `INV-${fallbackId}`);
+    if (invoiceLabel.length > 20 && invoiceLabel.includes('-')) {
+        invoiceLabel = 'INV-' + invoiceLabel.split('-')[1].toUpperCase();
+    }
     const invoiceDate = invoice?.created_at ? new Date(invoice.created_at) : new Date();
 
     document.getElementById('pb-invoice-id').textContent = invoiceLabel;
@@ -922,6 +1086,22 @@ function renderPaperBillFromSavedInvoice(invoice, items, student, schoolName) {
     stamp.textContent = status.toUpperCase();
     stamp.className = 'paper-bill-status-stamp' + (status.toLowerCase() === 'paid' ? ' paid' : '');
 
+    // Payment mode and UTR
+    const paymentMode = String(invoice?.payment_mode || 'cash');
+    const utrNo = String(invoice?.utr_no || '').trim();
+    const pmEl = document.getElementById('pb-payment-mode');
+    const utrRow = document.getElementById('pb-utr-row');
+    const utrEl = document.getElementById('pb-utr-no');
+    if (pmEl) pmEl.textContent = paymentMode.charAt(0).toUpperCase() + paymentMode.slice(1);
+    if (utrRow && utrEl) {
+        if (paymentMode.toLowerCase() === 'online' && utrNo) {
+            utrEl.textContent = utrNo;
+            utrRow.classList.remove('hidden');
+        } else {
+            utrRow.classList.add('hidden');
+        }
+    }
+
     openModal('bill-draft-modal');
 }
 
@@ -940,35 +1120,80 @@ function exportTotalSaleXls() {
         return;
     }
 
-    const rows = [["Invoice ID", "Student Name", "Total Amount", "Status"]];
-    let grandTotal = 0;
-
-    paidInvoices.forEach((inv) => {
-        const amount = Number(inv.total ?? inv.amount ?? 0) || 0;
-        grandTotal += amount;
-
-        rows.push([
-            String(inv.invoice_number || `INV-${inv.id || 'NA'}`),
-            String(inv.student_name || '-'),
-            Number(amount.toFixed(2)),
-            String(inv.status || 'Paid'),
-        ]);
-    });
-
-    rows.push([]);
-    rows.push(["TOTAL", "", Number(grandTotal.toFixed(2)), ""]);
-
-    const sheet = XLSX.utils.aoa_to_sheet(rows);
-    const book = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(book, sheet, 'Total Sale');
-
     const schoolName = String(state.activeSchool?.name || 'School').replace(/[^a-z0-9]+/gi, '_');
     const dateText = new Date().toISOString().slice(0, 10);
-    const fileName = `${schoolName}_total_sale_${dateText}.xlsx`;
 
-    XLSX.writeFile(book, fileName);
-    showToast('Total sale XLS exported successfully.');
+    const cashInvoices   = paidInvoices.filter(inv => String(inv?.payment_mode || 'cash').toLowerCase() !== 'online');
+    const onlineInvoices = paidInvoices.filter(inv => String(inv?.payment_mode || '').toLowerCase() === 'online');
+
+    let filesExported = 0;
+
+    // --- Cash Excel ---
+    if (cashInvoices.length) {
+        const rows = [['Invoice ID', 'Student Name', 'Total Amount', 'Status', 'Payment Mode']];
+        let grandTotal = 0;
+
+        cashInvoices.forEach(inv => {
+            const amount = Number(inv.total ?? inv.amount ?? 0) || 0;
+            grandTotal += amount;
+            let invLabel = String(inv.invoice_number || `INV-${inv.id || 'NA'}`);
+            if (invLabel.length > 20 && invLabel.includes('-')) invLabel = 'INV-' + invLabel.split('-')[1].toUpperCase();
+            rows.push([
+                invLabel,
+                String(inv.student_name || '-'),
+                Number(amount.toFixed(2)),
+                String(inv.status || 'Paid'),
+                'Cash',
+            ]);
+        });
+
+        rows.push([]);
+        rows.push(['TOTAL', '', Number(grandTotal.toFixed(2)), '', '']);
+
+        const sheet = XLSX.utils.aoa_to_sheet(rows);
+        const book  = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(book, sheet, 'Cash Sales');
+        XLSX.writeFile(book, `${schoolName}_cash_sale_${dateText}.xlsx`);
+        filesExported++;
+    }
+
+    // --- Online Excel ---
+    if (onlineInvoices.length) {
+        const rows = [['Invoice ID', 'Student Name', 'Total Amount', 'Status', 'Payment Mode', 'UTR No.']];
+        let grandTotal = 0;
+
+        onlineInvoices.forEach(inv => {
+            const amount = Number(inv.total ?? inv.amount ?? 0) || 0;
+            grandTotal += amount;
+            let invLabel = String(inv.invoice_number || `INV-${inv.id || 'NA'}`);
+            if (invLabel.length > 20 && invLabel.includes('-')) invLabel = 'INV-' + invLabel.split('-')[1].toUpperCase();
+            rows.push([
+                invLabel,
+                String(inv.student_name || '-'),
+                Number(amount.toFixed(2)),
+                String(inv.status || 'Paid'),
+                'Online',
+                String(inv.utr_no || '-'),
+            ]);
+        });
+
+        rows.push([]);
+        rows.push(['TOTAL', '', Number(grandTotal.toFixed(2)), '', '', '']);
+
+        const sheet = XLSX.utils.aoa_to_sheet(rows);
+        const book  = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(book, sheet, 'Online Sales');
+        XLSX.writeFile(book, `${schoolName}_online_sale_${dateText}.xlsx`);
+        filesExported++;
+    }
+
+    if (filesExported === 0) {
+        showToast('No invoices to export.', 'error');
+    } else {
+        showToast(`${filesExported} file${filesExported > 1 ? 's' : ''} exported successfully.`);
+    }
 }
+
 
 function formatProductColumnLabel(token) {
     const raw = String(token || '').trim();
@@ -1159,7 +1384,7 @@ function renderStudentPOSItems(filterText = '') {
         .filter(item => item.name.toLowerCase().includes(lower))
         .filter(item => shouldShowItemForGender(item, genderToken));
 
-    filtered.forEach(item => {
+    sortPosItems(filtered).forEach(item => {
         const entry = studentCart[item.id] || { qty: 0, size: '' };
         const sizes = item.sizes?.length ? item.sizes : ['XS', 'S', 'M', 'L', 'XL'];
         const options = sizes.map(s => `<option value="${s}">${s}</option>`).join('');
@@ -1598,7 +1823,7 @@ function renderPOSItems(filterText = '') {
         .filter(item => item.name.toLowerCase().includes(lower))
         .filter(item => shouldShowItemForGender(item, billingGenderToken));
 
-    filtered.forEach(item => {
+    sortPosItems(filtered).forEach(item => {
         const qty = state.cart[item.id] || 0;
         const unitPrice = getBillingUnitPrice(item.id);
         const card = document.createElement('div');
@@ -1687,7 +1912,7 @@ function updateCartUI() {
     if (total) total.textContent = subtotal.toFixed(2);
 }
 
-function persistInvoice(status) {
+function persistInvoice(status, paymentMode, utrNo) {
     if (!state.activeBillingStudent?.id) {
         return Promise.resolve({ ok: false, message: 'No active student selected.' });
     }
@@ -1713,6 +1938,8 @@ function persistInvoice(status) {
         school_id: state.activeSchool?.id || null,
         status,
         items: invoiceItems,
+        payment_mode: (paymentMode || 'cash').toLowerCase(),
+        utr_no: utrNo || null,
     };
 
     return fetch(`${API_BASE}/invoices`, {
@@ -1738,7 +1965,7 @@ function persistInvoice(status) {
                     if (line.size && line.size !== '-') state.billingSizeByItemId[item.id] = String(line.size);
                 });
 
-                return { ok: true, invoiceId: inserted?.id || genId() };
+                return { ok: true, invoiceId: inserted?.id || genId(), invoiceNumber: inserted?.invoice_number };
             }
 
             return { ok: false, message: data?.message || 'Failed to store invoice.' };
@@ -1747,6 +1974,19 @@ function persistInvoice(status) {
             console.error('persistInvoice error', err);
             return { ok: false, message: 'Connection error while storing invoice.' };
         });
+}
+
+function toggleUtrField() {
+    const mode = document.getElementById('payment-mode-select')?.value;
+    const utrField = document.getElementById('utr-field');
+    if (!utrField) return;
+    if (mode === 'Online') {
+        utrField.classList.remove('hidden');
+    } else {
+        utrField.classList.add('hidden');
+        const input = document.getElementById('utr-number-input');
+        if (input) input.value = '';
+    }
 }
 
 function saveAsDraft() {
@@ -1760,7 +2000,7 @@ function saveAsDraft() {
             return;
         }
         showToast('Invoice saved as draft.');
-        showPaperBill(String(result.invoiceId), 'Draft');
+        showPaperBill(String(result.invoiceId), 'Draft', null, null, result.invoiceNumber);
     });
 }
 
@@ -1781,7 +2021,10 @@ function generateInvoice() {
         btn.style.opacity = '0.7';
     }
 
-    persistInvoice('Paid').then(result => {
+    const paymentMode = document.getElementById('payment-mode-select')?.value || 'Cash';
+    const utrNo = document.getElementById('utr-number-input')?.value?.trim() || '';
+
+    persistInvoice('Paid', paymentMode, utrNo).then(result => {
         if (!result.ok) {
             showToast(result.message || 'Failed to generate invoice', 'error');
             isInvoiceSubmitting = false;
@@ -1792,7 +2035,7 @@ function generateInvoice() {
             return;
         }
         showToast('Invoice generated successfully.');
-        showPaperBill(String(result.invoiceId), 'Paid');
+        showPaperBill(String(result.invoiceId), 'Paid', paymentMode, utrNo, result.invoiceNumber);
         fetchInvoices({ force: true });
         loadStocks();
         isInvoiceSubmitting = false;
@@ -1803,12 +2046,19 @@ function generateInvoice() {
     });
 }
 
-function showPaperBill(invoiceId, status) {
+function showPaperBill(invoiceId, status, paymentMode, utrNo, invoiceNumber) {
     const s = state.activeBillingStudent;
     if (!s) return;
 
     const now = new Date();
-    document.getElementById('pb-invoice-id').textContent = `INV-${invoiceId}`;
+    
+    // Resolve the display label
+    let displayLabel = String(invoiceNumber || '');
+    if (!displayLabel) {
+        displayLabel = `INV-${String(invoiceId || 'NA').split('-')[0].toUpperCase()}`;
+    }
+
+    document.getElementById('pb-invoice-id').textContent = displayLabel;
     document.getElementById('pb-date').textContent = now.toLocaleDateString('en-IN');
     document.getElementById('pb-time').textContent = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('pb-student-name').textContent = s.name || '-';
@@ -1816,7 +2066,7 @@ function showPaperBill(invoiceId, status) {
     document.getElementById('pb-student-roll').textContent = s.sNo || '-';
     document.getElementById('pb-school-name').textContent = state.activeSchool?.name || '-';
     document.getElementById('pb-phone').textContent = s.phone || '-';
-    document.getElementById('pb-barcode-label').textContent = `INV-${invoiceId}`;
+    document.getElementById('pb-barcode-label').textContent = displayLabel;
 
     const tbody = document.getElementById('pb-items-body');
     tbody.innerHTML = '';
@@ -1854,6 +2104,22 @@ function showPaperBill(invoiceId, status) {
     const stamp = document.getElementById('pb-status-stamp');
     stamp.textContent = status.toUpperCase();
     stamp.className = 'paper-bill-status-stamp' + (status === 'Paid' ? ' paid' : '');
+
+    // Payment mode and UTR
+    const resolvedMode = String(paymentMode || 'cash');
+    const resolvedUtr = String(utrNo || '').trim();
+    const pmEl = document.getElementById('pb-payment-mode');
+    const utrRow = document.getElementById('pb-utr-row');
+    const utrEl = document.getElementById('pb-utr-no');
+    if (pmEl) pmEl.textContent = resolvedMode.charAt(0).toUpperCase() + resolvedMode.slice(1);
+    if (utrRow && utrEl) {
+        if (resolvedMode.toLowerCase() === 'online' && resolvedUtr) {
+            utrEl.textContent = resolvedUtr;
+            utrRow.classList.remove('hidden');
+        } else {
+            utrRow.classList.add('hidden');
+        }
+    }
 
     openModal('bill-draft-modal');
 }
@@ -2226,7 +2492,7 @@ function initApp() {
         });
     });
 
-    document.getElementById('search-student')?.addEventListener('input', debounce((e) => renderStudentsTable(e.target.value || '')));
+    document.getElementById('search-student')?.addEventListener('input', debounce((e) => renderStudentsTable(e.target.value || '', true)));
     document.getElementById('search-billing-student')?.addEventListener('input', debounce((e) => renderBillingStudentsTable(e.target.value || '')));
     document.getElementById('search-items')?.addEventListener('input', debounce((e) => renderPOSItems(e.target.value || '')));
     document.getElementById('search-items-student')?.addEventListener('input', debounce((e) => renderStudentPOSItems(e.target.value || '')));
