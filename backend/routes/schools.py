@@ -40,6 +40,8 @@ def _clean_item_name(value):
     cleaned = cleaned.strip() or raw
     if cleaned.lower() == "rubber band":
         return "Hair Band"
+    if cleaned.lower() == "pinafore":
+        return "Pina"
     return cleaned
 
 
@@ -100,10 +102,6 @@ def _build_catalog_rows(price_rows, school_id):
         item_name = _clean_item_name(item_raw)
         item_token = item_name.lower()
         
-        # Skip Pinafore - only Pina is allowed
-        if "pinafore" in item_token:
-            continue
-        
         display_name = item_name.title()
 
         # Keep shirt split by gender so UI can show gender-correct pricing for shirt.
@@ -125,18 +123,21 @@ def _build_catalog_rows(price_rows, school_id):
             }
 
         entry = grouped[group_key]
+        safe_size = size or "-"
+        
         if size:
             entry["sizes"].add(size)
-            if size not in entry["price_map"]:
-                entry["price_map"][size] = {}
-            entry["price_map"][size][gender] = price
+            
+        if safe_size not in entry["price_map"]:
+            entry["price_map"][safe_size] = {}
+        entry["price_map"][safe_size][gender] = price
 
-        if standard and size:
+        if standard:
             if standard not in entry["standard_price_map"]:
                 entry["standard_price_map"][standard] = {}
-            if size not in entry["standard_price_map"][standard]:
-                entry["standard_price_map"][standard][size] = {}
-            entry["standard_price_map"][standard][size][gender] = price
+            if safe_size not in entry["standard_price_map"][standard]:
+                entry["standard_price_map"][standard][safe_size] = {}
+            entry["standard_price_map"][standard][safe_size][gender] = price
 
         if price > 0:
             entry["default_prices"].append(price)

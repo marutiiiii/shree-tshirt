@@ -31,7 +31,7 @@ ITEM_TO_STOCK_NAMES = {
     "shirt": ["shirt", "boy shirt", "girl shirt"],
     "skirt": ["skirt"],
     "pant": ["pant"],
-    "pina": ["pina"],
+    "pina": ["pina", "pinafore"],
     "tie": ["tie"],
     "belt": ["belt"],
     "socks_house": ["socks", "house socks", "socks house"],
