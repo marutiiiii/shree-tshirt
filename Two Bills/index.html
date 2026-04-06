@@ -78,20 +78,6 @@
             font-size: 12px !important;
             line-height: 1.35 !important;
         }
-
-        @media print {
-            #bill-draft-modal {
-                display: block !important;
-                overflow: visible !important;
-            }
-            #bill-draft-modal .modal-content {
-                max-height: none !important;
-                height: auto !important;
-                overflow: visible !important;
-                max-width: none !important;
-                width: 100% !important;
-            }
-        }
     </style>
     <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1166,6 +1152,8 @@
                     <div class="paper-bill-footer">
                         <div class="paper-bill-thank">Thank you for your business!</div>
                         <div class="paper-bill-website">www.suarche.com</div>
+                        <div class="paper-bill-barcode">|||||||||||||||||||||</div>
+                        <div class="paper-bill-barcode-label" id="pb-barcode-label">INV-0000</div>
                     </div>
                 </div>
             </div>
@@ -1320,6 +1308,8 @@
                     <div class="paper-bill-footer">
                         <div class="paper-bill-thank">Thank you for your business!</div>
                         <div class="paper-bill-website">www.suarche.com</div>
+                        <div class="paper-bill-barcode">|||||||||||||||||||||</div>
+                        <div class="paper-bill-barcode-label" id="pb-barcode-label-copy2">INV-0000</div>
                     </div>
                 </div>
             </div>

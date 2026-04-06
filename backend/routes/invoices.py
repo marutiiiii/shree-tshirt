@@ -317,7 +317,8 @@ def create_invoice():
         for raw in items:
             item_name = str(raw.get("item_name") or raw.get("dress") or "").strip()
             quantity = int(raw.get("quantity") or 0)
-            size = str(raw.get("size") or "").strip() or None
+            size_val = raw.get("size")
+            size = str(size_val).strip() if size_val is not None else None
             unit_price = float(raw.get("unit_price") or 0)
 
             if not item_name or quantity <= 0:

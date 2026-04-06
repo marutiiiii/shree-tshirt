@@ -1,0 +1,326 @@
+﻿diff --git "a/.\\app.js" "b/.\\Two Bills\\app.js"
+index 07b9e14..1bb5219 100644
+--- "a/.\\app.js"
++++ "b/.\\Two Bills\\app.js"	
+@@ -86,42 +86,31 @@ const ITEM_IMAGE_MAP = {
+ };
+ 
+ // Preferred display order for POS item grid
+-const BOYS_ITEM_ORDER = [
++const PREFERRED_ITEM_ORDER = [
+     'boy shirt',
+-    'pant',
+-    'pt suit',
+-    'tie',
+-    'belt',
+-    'socks',
+-    'pt socks'
+-];
+-
+-const GIRLS_ITEM_ORDER = [
+     'girl shirt',
+     'pina',
+-    'pt suit',
+-    'tie',
++    'pant',
+     'belt',
++    'tie',
+     'socks',
+-    'pt socks',
++    'pt suit',
++    'hair band',
+     'hair belt',
+-    'hair band'
++    'pt socks',
+ ];
+ 
+-function getPosItemSortIndex(item, genderToken) {
++function getPosItemSortIndex(item) {
+     const name = String(item?.name || '').toLowerCase().trim();
+-    let order = BOYS_ITEM_ORDER;
+-    if (genderToken === 'girls') order = GIRLS_ITEM_ORDER;
+-
+-    for (let i = 0; i < order.length; i++) {
+-        const keyword = order[i];
++    for (let i = 0; i < PREFERRED_ITEM_ORDER.length; i++) {
++        const keyword = PREFERRED_ITEM_ORDER[i];
+         if (name.includes(keyword) || keyword.includes(name)) return i;
+     }
+-    return order.length;
++    return PREFERRED_ITEM_ORDER.length;
+ }
+ 
+-function sortPosItems(items, genderToken = '') {
+-    return [...items].sort((a, b) => getPosItemSortIndex(a, genderToken) - getPosItemSortIndex(b, genderToken));
++function sortPosItems(items) {
++    return [...items].sort((a, b) => getPosItemSortIndex(a) - getPosItemSortIndex(b));
+ }
+ 
+ // Cache removed - all data now fetched from database only
+@@ -157,10 +146,6 @@ function isHairBeltItem(item) {
+     return normalizeItemKey(item?.name || '') === 'hairbelt';
+ }
+ 
+-function isPantItem(item) {
+-    return normalizeItemKey(item?.name || '') === 'pant';
+-}
+-
+ function shouldShowItemForGender(item, genderToken) {
+     if (!item) return false;
+     if (!genderToken) return true;
+@@ -169,7 +154,6 @@ function shouldShowItemForGender(item, genderToken) {
+     if (isPinaItem(item)) return genderToken === 'girls';
+     if (isHairBandItem(item)) return genderToken === 'girls';
+     if (isHairBeltItem(item)) return genderToken === 'girls';
+-    if (isPantItem(item)) return genderToken === 'boys';
+     return true;
+ }
+ 
+@@ -1095,6 +1079,55 @@ function openGeneratedInvoice(invoiceId) {
+         });
+ }
+ 
++function setPaperBillText(baseId, value) {
++    [baseId, `${baseId}-copy2`].forEach((id) => {
++        const el = document.getElementById(id);
++        if (el) el.textContent = value;
++    });
++}
++
++function setPaperBillRows(rowsHtml) {
++    ['pb-items-body', 'pb-items-body-copy2'].forEach((id) => {
++        const tbody = document.getElementById(id);
++        if (tbody) tbody.innerHTML = rowsHtml;
++    });
++}
++
++function setPaperBillStatusStamp(statusText, isPaid) {
++    ['pb-status-stamp', 'pb-status-stamp-copy2'].forEach((id) => {
++        const stamp = document.getElementById(id);
++        if (!stamp) return;
++        stamp.textContent = statusText;
++        stamp.className = 'paper-bill-status-stamp' + (isPaid ? ' paid' : '');
++    });
++}
++
++function setPaperBillUtr(mode, utrNo) {
++    const normalizedMode = String(mode || 'cash').toLowerCase();
++    const normalizedUtr = String(utrNo || '').trim();
++
++    ['pb-payment-mode', 'pb-payment-mode-copy2'].forEach((id) => {
++        const pmEl = document.getElementById(id);
++        if (pmEl) pmEl.textContent = normalizedMode.charAt(0).toUpperCase() + normalizedMode.slice(1);
++    });
++
++    [
++        { rowId: 'pb-utr-row', valueId: 'pb-utr' },
++        { rowId: 'pb-utr-row-copy2', valueId: 'pb-utr-copy2' },
++    ].forEach(({ rowId, valueId }) => {
++        const rowEl = document.getElementById(rowId);
++        const valueEl = document.getElementById(valueId);
++        if (!rowEl || !valueEl) return;
++
++        if (normalizedMode === 'online' && normalizedUtr) {
++            valueEl.textContent = normalizedUtr;
++            rowEl.style.display = 'flex';
++        } else {
++            rowEl.style.display = 'none';
++        }
++    });
++}
++
+ function renderPaperBillFromSavedInvoice(invoice, items, student, schoolName) {
+     const fallbackId = String(invoice?.id || 'NA').split('-')[0].toUpperCase();
+     let invoiceLabel = String(invoice?.invoice_number || `INV-${fallbackId}`);
+@@ -1103,62 +1136,48 @@ function renderPaperBillFromSavedInvoice(invoice, items, student, schoolName) {
+     }
+     const invoiceDate = invoice?.created_at ? new Date(invoice.created_at) : new Date();
+ 
+-    document.getElementById('pb-invoice-id').textContent = invoiceLabel;
+-    document.getElementById('pb-date').textContent = invoiceDate.toLocaleDateString('en-IN');
+-    document.getElementById('pb-time').textContent = invoiceDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+-    document.getElementById('pb-student-name').textContent = student?.student_name || student?.name || '-';
+-    document.getElementById('pb-student-std').textContent = student?.std || '-';
+-    document.getElementById('pb-student-roll').textContent = student?.sr_no || '-';
+-    document.getElementById('pb-school-name').textContent = schoolName;
+-    document.getElementById('pb-phone').textContent = student?.mobile_no || student?.phone || '-';
+-    document.getElementById('pb-barcode-label').textContent = invoiceLabel;
+-
+-    const tbody = document.getElementById('pb-items-body');
+-    tbody.innerHTML = '';
++    setPaperBillText('pb-invoice-id', invoiceLabel);
++    setPaperBillText('pb-date', invoiceDate.toLocaleDateString('en-IN'));
++    setPaperBillText('pb-time', invoiceDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
++    setPaperBillText('pb-student-name', student?.student_name || student?.name || '-');
++    setPaperBillText('pb-student-std', student?.std || '-');
++    setPaperBillText('pb-student-roll', student?.sr_no || '-');
++    setPaperBillText('pb-school-name', schoolName);
++    setPaperBillText('pb-phone', student?.mobile_no || student?.phone || '-');
++    setPaperBillText('pb-barcode-label', invoiceLabel);
+ 
+     let subtotal = 0;
++    const rowsHtml = [];
+     items.forEach((line, index) => {
+         const qty = Number(line?.quantity || 0);
+         const unitPrice = Number(line?.unit_price || 0);
+         const lineTotal = qty * unitPrice;
+         subtotal += lineTotal;
+ 
+-        const tr = document.createElement('tr');
+-        tr.innerHTML = `
++        rowsHtml.push(`
++            <tr>
+             <td style="text-align:center">${index + 1}</td>
+             <td>${line?.item_name || line?.dress || '-'}</td>
+             <td style="text-align:center">${qty}</td>
+             <td style="text-align:right">Γé╣${unitPrice.toFixed(2)}</td>
+             <td style="text-align:right">Γé╣${lineTotal.toFixed(2)}</td>
+-        `;
+-        tbody.appendChild(tr);
++            </tr>
++        `);
+     });
++    setPaperBillRows(rowsHtml.join(''));
+ 
+     const grandTotal = Number(invoice?.total ?? subtotal ?? 0);
+-    document.getElementById('pb-subtotal').textContent = `Γé╣${subtotal.toFixed(2)}`;
+-    document.getElementById('pb-total').textContent = `Γé╣${grandTotal.toFixed(2)}`;
+-    document.getElementById('pb-amount-words').textContent = `Rupees ${Math.round(grandTotal)} Only`;
++    setPaperBillText('pb-subtotal', `Γé╣${subtotal.toFixed(2)}`);
++    setPaperBillText('pb-total', `Γé╣${grandTotal.toFixed(2)}`);
++    setPaperBillText('pb-amount-words', `Rupees ${Math.round(grandTotal)} Only`);
+ 
+     const status = String(invoice?.status || 'Draft');
+-    const stamp = document.getElementById('pb-status-stamp');
+-    stamp.textContent = status.toUpperCase();
+-    stamp.className = 'paper-bill-status-stamp' + (status.toLowerCase() === 'paid' ? ' paid' : '');
++    setPaperBillStatusStamp(status.toUpperCase(), status.toLowerCase() === 'paid');
+ 
+     // Payment mode and UTR
+     const paymentMode = String(invoice?.payment_mode || 'cash');
+     const utrNo = String(invoice?.utr_no || '').trim();
+-    const pmEl = document.getElementById('pb-payment-mode');
+-    const utrRow = document.getElementById('pb-utr-row');
+-    const utrEl = document.getElementById('pb-utr-no');
+-    if (pmEl) pmEl.textContent = paymentMode.charAt(0).toUpperCase() + paymentMode.slice(1);
+-    if (utrRow && utrEl) {
+-        if (paymentMode.toLowerCase() === 'online' && utrNo) {
+-            utrEl.textContent = utrNo;
+-            utrRow.classList.remove('hidden');
+-        } else {
+-            utrRow.classList.add('hidden');
+-        }
+-    }
++    setPaperBillUtr(paymentMode, utrNo);
+ 
+     openModal('bill-draft-modal');
+ }
+@@ -1443,7 +1462,7 @@ function renderStudentPOSItems(filterText = '') {
+         .filter(item => item.name.toLowerCase().includes(lower))
+         .filter(item => shouldShowItemForGender(item, genderToken));
+ 
+-    sortPosItems(filtered, genderToken).forEach(item => {
++    sortPosItems(filtered).forEach(item => {
+         const entry = studentCart[item.id] || { qty: 0, size: '' };
+         const sizes = item.sizes?.length ? item.sizes : ['XS', 'S', 'M', 'L', 'XL'];
+         const options = sizes.map(s => `<option value="${s}">${s}</option>`).join('');
+@@ -1896,7 +1915,7 @@ function renderPOSItems(filterText = '') {
+         .filter(item => item.name.toLowerCase().includes(lower))
+         .filter(item => shouldShowItemForGender(item, billingGenderToken));
+ 
+-    sortPosItems(filtered, billingGenderToken).forEach(item => {
++    sortPosItems(filtered).forEach(item => {
+         const qty = state.cart[item.id] || 0;
+         const unitPrice = getBillingUnitPrice(item.id);
+         const card = document.createElement('div');
+@@ -2132,23 +2151,20 @@ function showPaperBill(invoiceId, status, paymentMode, utrNo, invoiceNumber) {
+         displayLabel = `INV-${String(invoiceId || 'NA').split('-')[0].toUpperCase()}`;
+     }
+ 
+-    document.getElementById('pb-invoice-id').textContent = displayLabel;
+-    document.getElementById('pb-date').textContent = now.toLocaleDateString('en-IN');
+-    document.getElementById('pb-time').textContent = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+-    document.getElementById('pb-student-name').textContent = s.name || '-';
+-    document.getElementById('pb-student-std').textContent = s.std || '-';
+-    document.getElementById('pb-student-roll').textContent = s.sNo || '-';
+-    document.getElementById('pb-school-name').textContent = state.activeSchool?.name || '-';
+-    document.getElementById('pb-phone').textContent = s.phone || '-';
+-    document.getElementById('pb-payment-mode').textContent = (paymentMode || 'cash').toUpperCase();
+-    
+-    document.getElementById('pb-barcode-label').textContent = displayLabel;
+-
+-    const tbody = document.getElementById('pb-items-body');
+-    tbody.innerHTML = '';
++    setPaperBillText('pb-invoice-id', displayLabel);
++    setPaperBillText('pb-date', now.toLocaleDateString('en-IN'));
++    setPaperBillText('pb-time', now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }));
++    setPaperBillText('pb-student-name', s.name || '-');
++    setPaperBillText('pb-student-std', s.std || '-');
++    setPaperBillText('pb-student-roll', s.sNo || '-');
++    setPaperBillText('pb-school-name', state.activeSchool?.name || '-');
++    setPaperBillText('pb-phone', s.phone || '-');
++    setPaperBillText('pb-payment-mode', (paymentMode || 'cash').toUpperCase());
++    setPaperBillText('pb-barcode-label', displayLabel);
+ 
+     let subtotal = 0;
+     let idx = 1;
++    const rowsHtml = [];
+     Object.keys(state.cart).forEach(k => {
+         const itemId = Number(k);
+         const item = state.posItems.find(i => i.id === itemId);
+@@ -2159,45 +2175,31 @@ function showPaperBill(invoiceId, status, paymentMode, utrNo, invoiceNumber) {
+         const lineTotal = unitPrice * qty;
+         subtotal += lineTotal;
+ 
+-        const tr = document.createElement('tr');
+-        tr.innerHTML = `
++        rowsHtml.push(`
++            <tr>
+             <td style="text-align:center">${idx}</td>
+             <td>${item.name}</td>
+             <td style="text-align:center">${qty}</td>
+             <td style="text-align:right">Γé╣${unitPrice.toFixed(2)}</td>
+             <td style="text-align:right">Γé╣${lineTotal.toFixed(2)}</td>
+-        `;
+-        tbody.appendChild(tr);
++            </tr>
++        `);
+         idx += 1;
+     });
++    setPaperBillRows(rowsHtml.join(''));
+ 
+     const grand = subtotal;
+ 
+-    document.getElementById('pb-subtotal').textContent = `Γé╣${subtotal.toFixed(2)}`;
+-    document.getElementById('pb-total').textContent = `Γé╣${grand.toFixed(2)}`;
+-    document.getElementById('pb-amount-words').textContent = `Rupees ${Math.round(grand)} Only`;
++    setPaperBillText('pb-subtotal', `Γé╣${subtotal.toFixed(2)}`);
++    setPaperBillText('pb-total', `Γé╣${grand.toFixed(2)}`);
++    setPaperBillText('pb-amount-words', `Rupees ${Math.round(grand)} Only`);
+ 
+-    const stamp = document.getElementById('pb-status-stamp');
+-    stamp.textContent = status.toUpperCase();
+-    stamp.className = 'paper-bill-status-stamp' + (status === 'Paid' ? ' paid' : '');
++    setPaperBillStatusStamp(status.toUpperCase(), status === 'Paid');
+ 
+     // Payment mode and UTR
+     const resolvedMode = String(paymentMode || 'cash');
+     const resolvedUtr = String(utrNo || '').trim();
+-    const pmEl = document.getElementById('pb-payment-mode');
+-    const bUtrRow = document.getElementById('pb-utr-row');
+-    const bUtrEl = document.getElementById('pb-utr');
+-    
+-    if (pmEl) pmEl.textContent = resolvedMode.charAt(0).toUpperCase() + resolvedMode.slice(1);
+-    
+-    if (bUtrRow && bUtrEl) {
+-        if (resolvedMode.toLowerCase() === 'online' && resolvedUtr) {
+-            bUtrEl.textContent = resolvedUtr;
+-            bUtrRow.style.display = 'flex';
+-        } else {
+-            bUtrRow.style.display = 'none';
+-        }
+-    }
++    setPaperBillUtr(resolvedMode, resolvedUtr);
+ 
+     openModal('bill-draft-modal');
+ }

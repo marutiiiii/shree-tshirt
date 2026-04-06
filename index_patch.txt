@@ -1,0 +1,243 @@
+﻿diff --git "a/.\\index.html" "b/.\\Two Bills\\index.html"
+index ac5b7d6..cf80f45 100644
+--- "a/.\\index.html"
++++ "b/.\\Two Bills\\index.html"	
+@@ -27,35 +27,54 @@
+     <style>
+         /* Hard override to ensure updated invoice styling even if old CSS is cached */
+         #bill-draft-modal .modal-content {
+-            max-width: 860px !important;
+-            width: min(94vw, 860px) !important;
++            max-width: 1280px !important;
++            width: min(98vw, 1280px) !important;
+         }
+ 
+-        #paper-bill-content {
++        .paper-bill-sheet {
+             background: #ffffff !important;
+             background-image: none !important;
+-            width: min(210mm, 100%) !important;
+-            max-width: 794px !important;
++            width: min(297mm, 100%) !important;
++            max-width: 1123px !important;
+             border: 1px solid #d8d8d8 !important;
++            display: grid !important;
++            grid-template-columns: 1fr 1fr !important;
++            gap: 0 !important;
++        }
++
++        #paper-bill-content,
++        #paper-bill-content-copy2 {
++            border-right: 1px solid #d8d8d8 !important;
++        }
++
++        #paper-bill-content-copy2 {
++            border-right: 0 !important;
+         }
+ 
+         #paper-bill-content::before,
+-        #paper-bill-content::after {
++        #paper-bill-content::after,
++        #paper-bill-content-copy2::before,
++        #paper-bill-content-copy2::after {
+             display: none !important;
+             content: none !important;
+         }
+ 
+-        #paper-bill-content .paper-bill-inner {
+-            padding: 10mm !important;
++        #paper-bill-content .paper-bill-inner,
++        #paper-bill-content-copy2 .paper-bill-inner {
++            padding: 8mm !important;
+         }
+ 
+-        #paper-bill-content .paper-bill-items {
++        #paper-bill-content .paper-bill-items,
++        #paper-bill-content-copy2 .paper-bill-items {
+             font-size: 12px !important;
+         }
+ 
+         #paper-bill-content .paper-bill-info,
+         #paper-bill-content .paper-bill-terms,
+-        #paper-bill-content .paper-bill-amount-words {
++        #paper-bill-content .paper-bill-amount-words,
++        #paper-bill-content-copy2 .paper-bill-info,
++        #paper-bill-content-copy2 .paper-bill-terms,
++        #paper-bill-content-copy2 .paper-bill-amount-words {
+             font-size: 12px !important;
+             line-height: 1.35 !important;
+         }
+@@ -981,7 +1000,8 @@
+     <div id="bill-draft-modal" class="modal hidden">
+         <div class="modal-overlay" onclick="closeModal('bill-draft-modal')"></div>
+         <div class="modal-content slide-up">
+-            <!-- The paper receipt -->
++            <!-- The paper receipt (two copies on one A4 print) -->
++            <div class="paper-bill-sheet">
+             <div class="paper-bill" id="paper-bill-content">
+                 <div class="paper-bill-inner">
+                     <!-- Header -->
+@@ -1138,6 +1158,163 @@
+                 </div>
+             </div>
+ 
++            <div class="paper-bill" id="paper-bill-content-copy2">
++                <div class="paper-bill-inner">
++                    <!-- Header -->
++                    <div class="paper-bill-header">
++                        <div class="paper-bill-gst">GSTIN: 27BZSPN1448R1ZB</div>
++                        <div class="paper-bill-shop-name">Suarche Clothing</div>
++                        <div class="paper-bill-tagline">T-Shirt for Corporate, Industry and Casual</div>
++                        <div class="paper-bill-address">
++                            Proprietor: Shivraj Nilkanth<br>
++                            3B, Pragat Complex, Near Mahesh Gas Welding<br>
++                            Main Road, Kopargaon, (MH) 423601<br>
++                            Phone: 8600369655 | Email: suarcheent@gmail.com | www.suarche.com
++                        </div>
++                    </div>
++
++                    <hr class="paper-bill-divider-solid">
++
++                    <!-- Bill meta info -->
++                    <div class="paper-bill-info-section">
++                        <div class="paper-bill-info-row">
++                            <div class="paper-bill-info-col">
++                                <div class="paper-bill-info">
++                                    <span>Invoice #</span>
++                                    <span id="pb-invoice-id-copy2">ΓÇö</span>
++                                </div>
++                                <div class="paper-bill-info">
++                                    <span>Date</span>
++                                    <span id="pb-date-copy2">ΓÇö</span>
++                                </div>
++                                <div class="paper-bill-info">
++                                    <span>Time</span>
++                                    <span id="pb-time-copy2">ΓÇö</span>
++                                </div>
++                                <div class="paper-bill-info">
++                                    <span>Payment Mode</span>
++                                    <span id="pb-payment-mode-copy2">ΓÇö</span>
++                                </div>
++                                <div id="pb-utr-row-copy2" class="paper-bill-info" style="display: none;">
++                                    <span>UTR No.</span>
++                                    <span id="pb-utr-copy2">ΓÇö</span>
++                                </div>
++                            </div>
++                            <div class="paper-bill-info-col">
++                                <div class="paper-bill-info">
++                                    <span>Student Name</span>
++                                    <span id="pb-student-name-copy2">ΓÇö</span>
++                                </div>
++                                <div class="paper-bill-info">
++                                    <span>Class & Section</span>
++                                    <span id="pb-student-std-copy2">ΓÇö</span>
++                                </div>
++                                <div class="paper-bill-info">
++                                    <span>Roll No.</span>
++                                    <span id="pb-student-roll-copy2">ΓÇö</span>
++                                </div>
++                            </div>
++                        </div>
++                        <div class="paper-bill-info-row">
++                            <div class="paper-bill-info-col">
++                                <div class="paper-bill-info">
++                                    <span>School</span>
++                                    <span id="pb-school-name-copy2">ΓÇö</span>
++                                </div>
++                                <div class="paper-bill-info">
++                                    <span>Parent Phone</span>
++                                    <span id="pb-phone-copy2">ΓÇö</span>
++                                </div>
++                            </div>
++                        </div>
++                    </div>
++
++                    <hr class="paper-bill-divider">
++
++                    <!-- Items Table -->
++                    <table class="paper-bill-items">
++                        <thead>
++                            <tr>
++                                <th style="width:8%">S.No</th>
++                                <th style="width:42%">Description</th>
++                                <th style="width:12%">Qty</th>
++                                <th style="width:15%">Rate</th>
++                                <th style="width:15%">Amount</th>
++                            </tr>
++                        </thead>
++                        <tbody id="pb-items-body-copy2">
++                            <!-- Items will be populated here -->
++                        </tbody>
++                    </table>
++
++                    <hr class="paper-bill-divider">
++
++                    <!-- Totals -->
++                    <div class="paper-bill-totals-section">
++                        <div class="paper-bill-totals">
++                            <div class="paper-bill-total-row">
++                                <span>Subtotal (Γé╣)</span>
++                                <span id="pb-subtotal-copy2">Γé╣0.00</span>
++                            </div>
++                        </div>
++
++                        <hr class="paper-bill-divider-solid">
++
++                        <div class="paper-bill-totals">
++                            <div class="paper-bill-total-row grand">
++                                <span>GRAND TOTAL</span>
++                                <span id="pb-total-copy2">Γé╣0.00</span>
++                            </div>
++                        </div>
++                    </div>
++
++                    <hr class="paper-bill-divider">
++
++                    <!-- Amount in Words -->
++                    <div class="paper-bill-amount-words">
++                        <strong>Amount in Words:</strong> <span id="pb-amount-words-copy2">Rupees Zero Only</span>
++                    </div>
++
++                    <hr class="paper-bill-divider">
++
++                    <!-- Payment Terms -->
++                    <div class="paper-bill-terms">
++                        <div class="paper-bill-terms-title">Payment Terms & Conditions:</div>
++                        <div class="paper-bill-terms-text">
++                            1. Goods once sold will not be taken back.<br>
++                            2. Subject to Kopargaon jurisdiction.<br>
++                            3. This is a computer generated invoice.
++                        </div>
++                    </div>
++
++                    <!-- Status Stamp -->
++                    <div style="text-align:center; margin: 1rem 0;">
++                        <div class="paper-bill-status-stamp" id="pb-status-stamp-copy2">DRAFT</div>
++                    </div>
++
++                    <!-- Signature Area -->
++                    <div class="paper-bill-signature">
++                        <div class="signature-line">
++                            <div class="signature-label">Customer Signature</div>
++                            <div class="signature-dash">_________________________</div>
++                        </div>
++                        <div class="signature-line">
++                            <div class="signature-label">Authorized Signatory</div>
++                            <div class="signature-dash">_________________________</div>
++                        </div>
++                    </div>
++
++                    <!-- Footer -->
++                    <div class="paper-bill-footer">
++                        <div class="paper-bill-thank">Thank you for your business!</div>
++                        <div class="paper-bill-website">www.suarche.com</div>
++                        <div class="paper-bill-barcode">|||||||||||||||||||||</div>
++                        <div class="paper-bill-barcode-label" id="pb-barcode-label-copy2">INV-0000</div>
++                    </div>
++                </div>
++            </div>
++            </div>
++
+             <!-- Action buttons below the paper -->
+             <div class="paper-bill-actions">
+                 <button class="btn btn-outline" onclick="closeBillModal()">

@@ -1,0 +1,83 @@
+﻿diff --git "a/.\\style.css" "b/.\\Two Bills\\style.css"
+index 14a9ab5..96ef9f4 100644
+--- "a/.\\style.css"
++++ "b/.\\Two Bills\\style.css"	
+@@ -1265,20 +1265,35 @@ img {
+     padding: 1rem 0;
+ }
+ 
++.paper-bill-sheet {
++    width: min(297mm, 100%);
++    max-width: 1123px;
++    margin: 0 auto;
++    display: grid;
++    grid-template-columns: 1fr 1fr;
++    border: 1px solid #d8d8d8;
++    background: #fff;
++}
++
+ /* The paper receipt itself */
+ .paper-bill {
+     background: #ffffff;
+     font-family: 'Courier New', Courier, monospace;
+     color: #1a1a1a;
+-    width: min(210mm, 100%);
+-    max-width: 794px;
+-    margin: 0 auto;
++    width: 100%;
++    max-width: none;
++    margin: 0;
+     box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+     position: relative;
+-    border: 1px solid #d8d8d8;
++    border: 0;
++    border-right: 1px solid #d8d8d8;
+     background-image: none;
+ }
+ 
++#paper-bill-content-copy2 {
++    border-right: 0;
++}
++
+ /* Top torn edge */
+ .paper-bill::before {
+     content: '';
+@@ -1561,8 +1576,8 @@ img {
+ /* Print Styles */
+ @media print {
+     @page {
+-        size: A4 portrait;
+-        margin: 8mm;
++        size: A4 landscape;
++        margin: 6mm;
+     }
+ 
+     body * {
+@@ -1586,15 +1601,27 @@ img {
+         display: none;
+     }
+     
++    .paper-bill-sheet {
++        width: 100%;
++        max-width: none;
++        border: none;
++        box-shadow: none;
++    }
++
+     .paper-bill {
+         box-shadow: none;
+         border: none;
++        border-right: 1px solid #d8d8d8;
+         width: 100%;
+         max-width: none;
+         margin: 0;
+         page-break-inside: avoid;
+     }
+ 
++    #paper-bill-content-copy2 {
++        border-right: 0;
++    }
++
+     .paper-bill-inner {
+         padding: 6mm;
+     }
