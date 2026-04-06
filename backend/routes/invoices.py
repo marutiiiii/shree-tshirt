@@ -362,7 +362,6 @@ def create_invoice():
                     "quantity": line["quantity"],
                     "size": line["size"],
                     "unit_price": line["unit_price"],
-                    "line_total": round(line["quantity"] * line["unit_price"], 2)
                 })
             supabase.table("invoice_items").insert(invoice_items_payload).execute()
             
