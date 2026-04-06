@@ -86,31 +86,42 @@ const ITEM_IMAGE_MAP = {
 };
 
 // Preferred display order for POS item grid
-const PREFERRED_ITEM_ORDER = [
+const BOYS_ITEM_ORDER = [
     'boy shirt',
-    'girl shirt',
-    'pina',
     'pant',
-    'belt',
-    'tie',
-    'socks',
     'pt suit',
-    'hair band',
-    'hair belt',
-    'pt socks',
+    'tie',
+    'belt',
+    'socks',
+    'pt socks'
 ];
 
-function getPosItemSortIndex(item) {
+const GIRLS_ITEM_ORDER = [
+    'girl shirt',
+    'pina',
+    'pt suit',
+    'tie',
+    'belt',
+    'socks',
+    'pt socks',
+    'hair belt',
+    'hair band'
+];
+
+function getPosItemSortIndex(item, genderToken) {
     const name = String(item?.name || '').toLowerCase().trim();
-    for (let i = 0; i < PREFERRED_ITEM_ORDER.length; i++) {
-        const keyword = PREFERRED_ITEM_ORDER[i];
+    let order = BOYS_ITEM_ORDER;
+    if (genderToken === 'girls') order = GIRLS_ITEM_ORDER;
+
+    for (let i = 0; i < order.length; i++) {
+        const keyword = order[i];
         if (name.includes(keyword) || keyword.includes(name)) return i;
     }
-    return PREFERRED_ITEM_ORDER.length;
+    return order.length;
 }
 
-function sortPosItems(items) {
-    return [...items].sort((a, b) => getPosItemSortIndex(a) - getPosItemSortIndex(b));
+function sortPosItems(items, genderToken = '') {
+    return [...items].sort((a, b) => getPosItemSortIndex(a, genderToken) - getPosItemSortIndex(b, genderToken));
 }
 
 // Cache removed - all data now fetched from database only
@@ -146,6 +157,10 @@ function isHairBeltItem(item) {
     return normalizeItemKey(item?.name || '') === 'hairbelt';
 }
 
+function isPantItem(item) {
+    return normalizeItemKey(item?.name || '') === 'pant';
+}
+
 function shouldShowItemForGender(item, genderToken) {
     if (!item) return false;
     if (!genderToken) return true;
@@ -154,6 +169,7 @@ function shouldShowItemForGender(item, genderToken) {
     if (isPinaItem(item)) return genderToken === 'girls';
     if (isHairBandItem(item)) return genderToken === 'girls';
     if (isHairBeltItem(item)) return genderToken === 'girls';
+    if (isPantItem(item)) return genderToken === 'boys';
     return true;
 }
 
@@ -1427,7 +1443,7 @@ function renderStudentPOSItems(filterText = '') {
         .filter(item => item.name.toLowerCase().includes(lower))
         .filter(item => shouldShowItemForGender(item, genderToken));
 
-    sortPosItems(filtered).forEach(item => {
+    sortPosItems(filtered, genderToken).forEach(item => {
         const entry = studentCart[item.id] || { qty: 0, size: '' };
         const sizes = item.sizes?.length ? item.sizes : ['XS', 'S', 'M', 'L', 'XL'];
         const options = sizes.map(s => `<option value="${s}">${s}</option>`).join('');
@@ -1880,7 +1896,7 @@ function renderPOSItems(filterText = '') {
         .filter(item => item.name.toLowerCase().includes(lower))
         .filter(item => shouldShowItemForGender(item, billingGenderToken));
 
-    sortPosItems(filtered).forEach(item => {
+    sortPosItems(filtered, billingGenderToken).forEach(item => {
         const qty = state.cart[item.id] || 0;
         const unitPrice = getBillingUnitPrice(item.id);
         const card = document.createElement('div');
